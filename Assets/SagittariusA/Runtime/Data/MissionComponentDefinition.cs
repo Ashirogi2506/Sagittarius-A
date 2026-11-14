@@ -13,7 +13,7 @@ namespace SagittariusA.Gameplay.Data
         Protection
     }
 
-    [CreateAssetMenu(menuName = "Sagittarius A/Mission/Component", fileName = "Component_")]
+    [CreateAssetMenu(menuName = "Far Signal/Mission/Component", fileName = "Component_")]
     public sealed class MissionComponentDefinition : ScriptableObject
     {
         [SerializeField] private string id;

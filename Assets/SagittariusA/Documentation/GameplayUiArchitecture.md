@@ -2,11 +2,11 @@
 
 ## Screen map
 
-`Main Menu -> Mission Selection -> Briefing -> Configuration -> Review -> Simulation -> Results`
+`Main Menu -> Commander Setup -> Expedition Route -> Briefing -> Configuration -> Review -> Launch -> Flight Log`
 
 - A successful result can unlock the next mission.
 - Retry returns to Configuration without requiring the player to repeat the briefing.
-- The same screens must load different mission data for Earth, Moon, Mars, and Jupiter.
+- The same screens must load different chapter data for Earth, Moon, Mars, and Ganymede/Jupiter.
 
 ## Responsibility boundaries
 

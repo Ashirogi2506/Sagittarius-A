@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace SagittariusA.Gameplay.Data
 {
-    [CreateAssetMenu(menuName = "Sagittarius A/Mission/Orbit Option", fileName = "Orbit_")]
+    [CreateAssetMenu(menuName = "Far Signal/Mission/Orbit Option", fileName = "Orbit_")]
     public sealed class OrbitOptionDefinition : ScriptableObject
     {
         [SerializeField] private string id;
@@ -16,7 +16,7 @@ namespace SagittariusA.Gameplay.Data
         public float AltitudeKilometers => altitudeKilometers;
     }
 
-    [CreateAssetMenu(menuName = "Sagittarius A/Mission/Launcher Option", fileName = "Launcher_")]
+    [CreateAssetMenu(menuName = "Far Signal/Mission/Launcher Option", fileName = "Launcher_")]
     public sealed class LauncherOptionDefinition : ScriptableObject
     {
         [SerializeField] private string id;

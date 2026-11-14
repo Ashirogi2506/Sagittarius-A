@@ -41,7 +41,7 @@ namespace SagittariusA.Gameplay.Editor
             }
         }
 
-        [MenuItem("Sagittarius A/Build Gameplay UI Scene")]
+        [MenuItem("Far Signal/Build Gameplay UI Scene")]
         public static void BuildGameplayUiScene()
         {
             Scene previousScene = SceneManager.GetActiveScene();
@@ -72,13 +72,14 @@ namespace SagittariusA.Gameplay.Editor
             flowRoot.transform.SetParent(root.transform, false);
             Stretch(flowRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
-            CreateScreen(flowRoot.transform, GameScreen.MainMenu, "SAGITTARIUS A", "Design missions. Understand the trade-offs. Reach farther.", "Start Campaign", GameScreen.MissionSelection, null, GameScreen.MainMenu);
-            CreateScreen(flowRoot.transform, GameScreen.MissionSelection, "MISSION SELECTION", "Earth Observation is available. Moon, Mars, and Jupiter unlock as the campaign progresses.", "Open Earth Mission", GameScreen.Briefing, "Back", GameScreen.MainMenu);
-            CreateScreen(flowRoot.transform, GameScreen.Briefing, "EARTH OBSERVATION BRIEFING", "Configure a scientifically useful Earth-observation spacecraft while staying within mission limits.", "Start Configuration", GameScreen.Configuration, "Back", GameScreen.MissionSelection);
-            CreateScreen(flowRoot.transform, GameScreen.Configuration, "SPACECRAFT CONFIGURATION", "Select instruments, spacecraft systems, an orbit, and a launcher. Resource cards will be connected next.", "Review Design", GameScreen.Review, "Back", GameScreen.Briefing);
-            CreateScreen(flowRoot.transform, GameScreen.Review, "MISSION REVIEW", "Review resource totals, compatibility messages, and expected risks before launch.", "Launch", GameScreen.Simulation, "Back", GameScreen.Configuration);
-            CreateScreen(flowRoot.transform, GameScreen.Simulation, "MISSION SIMULATION", "The 3D mission visualization and simulation status will appear here.", "View Results", GameScreen.Results, null, GameScreen.Simulation);
-            CreateScreen(flowRoot.transform, GameScreen.Results, "POST-MISSION REPORT", "Success, score breakdown, scientific results, and explanations will appear here.", "Retry Configuration", GameScreen.Configuration, "Mission Selection", GameScreen.MissionSelection);
+            CreateScreen(flowRoot.transform, GameScreen.MainMenu, "FAR SIGNAL", "One crew. Three stops. One signal that has to make it home.", "Start New Expedition", GameScreen.CommanderSetup, null, GameScreen.MainMenu);
+            CreateScreen(flowRoot.transform, GameScreen.CommanderSetup, "CHOOSE YOUR COMMANDER", "Choose a portrait and call sign for the expedition.", "Begin Briefing", GameScreen.MissionSelection, "Back", GameScreen.MainMenu);
+            CreateScreen(flowRoot.transform, GameScreen.MissionSelection, "EXPEDITION ROUTE", "Earth to Moon, Mars, and Ganymede.", "Open The Moon Call", GameScreen.Briefing, "Back", GameScreen.CommanderSetup);
+            CreateScreen(flowRoot.transform, GameScreen.Briefing, "EARTH — THE MOON CALL", "Launch with the P-4 panel and insulated repair kit for Pole-7.", "Configure Ship", GameScreen.Configuration, "Back", GameScreen.MissionSelection);
+            CreateScreen(flowRoot.transform, GameScreen.Configuration, "SHIP CONFIGURATION", "Build within the $115M budget and preserve the required Moon margins.", "Review Launch", GameScreen.Review, "Back", GameScreen.Briefing);
+            CreateScreen(flowRoot.transform, GameScreen.Review, "EARTH LAUNCH REPORT", "Verify hardware, cargo, and Beacon Pad plan.", "Commit Launch", GameScreen.Simulation, "Back", GameScreen.Configuration);
+            CreateScreen(flowRoot.transform, GameScreen.Simulation, "LAUNCH AND ORBIT", "Complete final checks and establish Earth orbit.", "Confirm Orbit", GameScreen.Results, null, GameScreen.Simulation);
+            CreateScreen(flowRoot.transform, GameScreen.Results, "EARTH FLIGHT LOG", "Cargo secure. Earth-to-Moon transit is ready.", "Return to Route", GameScreen.MissionSelection, "Reconfigure", GameScreen.Configuration);
 
             GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem));
             eventSystem.transform.SetParent(root.transform, false);
@@ -112,7 +113,7 @@ namespace SagittariusA.Gameplay.Editor
             RectTransform panelRect = panel.rectTransform;
             Stretch(panelRect, new Vector2(0.1f, 0.1f), new Vector2(0.9f, 0.9f), Vector2.zero, Vector2.zero);
 
-            Text eyebrow = CreateText("FlowLabel", panel.transform, "EARTH VERTICAL SLICE", 20, FontStyle.Bold, Accent, TextAnchor.MiddleLeft);
+            Text eyebrow = CreateText("FlowLabel", panel.transform, "FAR SIGNAL · 2168", 20, FontStyle.Bold, Accent, TextAnchor.MiddleLeft);
             SetRect(eyebrow.rectTransform, new Vector2(0.08f, 0.82f), new Vector2(0.92f, 0.9f), Vector2.zero, Vector2.zero);
 
             Text title = CreateText("Heading", panel.transform, heading, 48, FontStyle.Bold, TextColor, TextAnchor.MiddleLeft);

@@ -10,7 +10,7 @@ namespace SagittariusA.Gameplay.Data
         [TextArea(2, 5)] public string definition;
     }
 
-    [CreateAssetMenu(menuName = "Sagittarius A/Content/Glossary", fileName = "Glossary")]
+    [CreateAssetMenu(menuName = "Far Signal/Content/Glossary", fileName = "Glossary")]
     public sealed class GlossaryDatabase : ScriptableObject
     {
         [SerializeField] private GlossaryEntry[] entries;

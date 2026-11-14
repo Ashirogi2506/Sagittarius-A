@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace SagittariusA.Gameplay.Data
 {
-    [CreateAssetMenu(menuName = "Sagittarius A/Mission/Mission Definition", fileName = "Mission_")]
+    [CreateAssetMenu(menuName = "Far Signal/Mission/Mission Definition", fileName = "Mission_")]
     public sealed class MissionDefinition : ScriptableObject
     {
         [SerializeField] private string id;
