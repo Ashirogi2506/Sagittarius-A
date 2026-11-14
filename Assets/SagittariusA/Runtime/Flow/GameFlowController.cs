@@ -102,6 +102,19 @@ namespace SagittariusA.Gameplay.Flow
 
             Image background = CreateImage("Background", canvasObject.transform, Background);
             Stretch(background.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            Texture2D backgroundTexture = Resources.Load<Texture2D>("Art/lunar-menu-background");
+            if (backgroundTexture != null)
+            {
+                background.sprite = Sprite.Create(
+                    backgroundTexture,
+                    new Rect(0f, 0f, backgroundTexture.width, backgroundTexture.height),
+                    new Vector2(0.5f, 0.5f),
+                    100f);
+                background.color = Color.white;
+            }
+
+            Image atmosphere = CreateImage("Atmosphere", canvasObject.transform, new Color(0.01f, 0.025f, 0.055f, 0.22f));
+            Stretch(atmosphere.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             CreateScreen(canvasObject.transform, GameScreen.MainMenu, "SAGITTARIUS A", "Design missions. Understand the trade-offs. Reach farther.", "Start Campaign", GameScreen.MissionSelection, null, GameScreen.MainMenu);
             CreateScreen(canvasObject.transform, GameScreen.MissionSelection, "MISSION SELECTION", "Earth Observation is available. Moon, Mars, and Jupiter unlock as the campaign progresses.", "Open Earth Mission", GameScreen.Briefing, "Back", GameScreen.MainMenu);
@@ -130,7 +143,13 @@ namespace SagittariusA.Gameplay.Flow
             string secondaryLabel,
             GameScreen secondaryTarget)
         {
-            Image panel = CreateImage($"{screen}Screen", parent, Panel);
+            if (screen == GameScreen.MainMenu)
+            {
+                CreateMainMenuScreen(parent, primaryTarget);
+                return;
+            }
+
+            Image panel = CreateImage($"{screen}Screen", parent, new Color(Panel.r, Panel.g, Panel.b, 0.9f));
             Stretch(panel.rectTransform, new Vector2(0.025f, 0.05f), new Vector2(0.975f, 0.95f), Vector2.zero, Vector2.zero);
 
             Text eyebrow = CreateText("FlowLabel", panel.transform, GetStepLabel(screen), 18, FontStyle.Bold, Accent, TextAnchor.MiddleLeft);
@@ -159,6 +178,63 @@ namespace SagittariusA.Gameplay.Flow
             GameScreenView view = panel.gameObject.AddComponent<GameScreenView>();
             view.Configure(screen, primary, primaryTarget, secondary, secondaryTarget);
             panel.gameObject.SetActive(screen == GameScreen.MainMenu);
+        }
+
+        private static void CreateMainMenuScreen(Transform parent, GameScreen primaryTarget)
+        {
+            Image panel = CreateImage("MainMenuScreen", parent, new Color(0f, 0f, 0f, 0f));
+            Stretch(panel.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            CreateLabel(panel.transform, "/", 48, FontStyle.Bold, new Color(1f, 0.43f, 0.04f, 1f), new Vector2(0.045f, 0.81f), new Vector2(0.09f, 0.94f));
+            CreateLabel(panel.transform, "S A G I T T A R I U S   A", 42, FontStyle.Bold, TextColor, new Vector2(0.075f, 0.82f), new Vector2(0.52f, 0.93f));
+            CreateLabel(panel.transform, "S P A C E   M I S S I O N   D E S I G N   P R O G R A M", 17, FontStyle.Normal, MutedText, new Vector2(0.047f, 0.75f), new Vector2(0.52f, 0.82f));
+
+            CreateTopTab(panel.transform, "E A R T H", 0.68f, true);
+            CreateTopTab(panel.transform, "M O O N", 0.76f, false);
+            CreateTopTab(panel.transform, "M A R S", 0.84f, false);
+            CreateTopTab(panel.transform, "J U P I T E R", 0.91f, false);
+
+            Image accentBar = CreateImage("ActiveMenuAccent", panel.transform, new Color(1f, 0.43f, 0.04f, 1f));
+            Stretch(accentBar.rectTransform, new Vector2(0.047f, 0.596f), new Vector2(0.05f, 0.654f), Vector2.zero, Vector2.zero);
+
+            Button startButton = CreateButton("StartNewProgram", panel.transform, "START NEW PROGRAM", new Color(0f, 0f, 0f, 0f));
+            Stretch(startButton.GetComponent<RectTransform>(), new Vector2(0.055f, 0.58f), new Vector2(0.36f, 0.67f), Vector2.zero, Vector2.zero);
+            Text startLabel = startButton.GetComponentInChildren<Text>();
+            startLabel.fontSize = 25;
+            startLabel.alignment = TextAnchor.MiddleLeft;
+            startLabel.fontStyle = FontStyle.Bold;
+            CreateLabel(panel.transform, "→", 32, FontStyle.Normal, new Color(1f, 0.43f, 0.04f, 1f), new Vector2(0.325f, 0.585f), new Vector2(0.37f, 0.665f));
+
+            CreateMenuItem(panel.transform, "MISSION ARCHIVE", 0.5f);
+            CreateMenuItem(panel.transform, "ACHIEVEMENTS", 0.43f);
+            CreateMenuItem(panel.transform, "SETTINGS", 0.36f);
+            CreateMenuItem(panel.transform, "CREDITS", 0.29f);
+            CreateMenuItem(panel.transform, "EXIT", 0.22f);
+
+            Image statusBar = CreateImage("ProgramStatusAccent", panel.transform, new Color(1f, 0.43f, 0.04f, 1f));
+            Stretch(statusBar.rectTransform, new Vector2(0.047f, 0.075f), new Vector2(0.049f, 0.11f), Vector2.zero, Vector2.zero);
+            CreateLabel(panel.transform, "PROGRAM STATUS: EARTH MISSION AVAILABLE", 15, FontStyle.Normal, TextColor, new Vector2(0.06f, 0.06f), new Vector2(0.43f, 0.125f));
+
+            GameScreenView view = panel.gameObject.AddComponent<GameScreenView>();
+            view.Configure(GameScreen.MainMenu, startButton, primaryTarget, null, GameScreen.MainMenu);
+            panel.gameObject.SetActive(true);
+        }
+
+        private static void CreateTopTab(Transform parent, string label, float x, bool active)
+        {
+            CreateLabel(parent, label, 15, FontStyle.Bold, active ? new Color(1f, 0.43f, 0.04f, 1f) : TextColor, new Vector2(x, 0.88f), new Vector2(Mathf.Min(x + 0.08f, 0.98f), 0.95f), TextAnchor.MiddleCenter);
+            if (!active)
+            {
+                return;
+            }
+
+            Image underline = CreateImage(label + "Underline", parent, new Color(1f, 0.43f, 0.04f, 1f));
+            Stretch(underline.rectTransform, new Vector2(x, 0.875f), new Vector2(Mathf.Min(x + 0.075f, 0.98f), 0.878f), Vector2.zero, Vector2.zero);
+        }
+
+        private static void CreateMenuItem(Transform parent, string label, float y)
+        {
+            CreateLabel(parent, label, 21, FontStyle.Normal, new Color(0.78f, 0.81f, 0.86f, 1f), new Vector2(0.065f, y), new Vector2(0.35f, y + 0.065f));
         }
 
         private static string GetStepLabel(GameScreen screen)
