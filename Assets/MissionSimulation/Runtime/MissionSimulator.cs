@@ -14,7 +14,7 @@ namespace MissionSimulation
         {
             if (s == null || d == null) throw new ArgumentNullException(s == null ? "scenario" : "design");
             var r = new ValidationResult(); var b = r.resources;
-            if (s.objective == null || s.components == null || s.orbits == null || s.launchers == null || s.budget <= 0 || s.durationDays <= 0 || s.objective.requiredScience <= 0 || s.objective.requiredDataMB <= 0 || s.partialThreshold <= 0 || s.successThreshold > 1 || s.partialThreshold >= s.successThreshold)
+            if (s.objective == null || s.rules == null || s.requiredSystemTags == null || s.components == null || s.orbits == null || s.launchers == null || s.budget <= 0 || s.durationDays <= 0 || s.objective.requiredScience <= 0 || s.objective.requiredDataMB <= 0 || s.partialThreshold <= 0 || s.successThreshold > 1 || s.partialThreshold >= s.successThreshold || s.rules.warningPenalty < 0 || s.rules.missingSupportFactor < 0 || s.rules.missingSupportFactor > 1 || s.rules.shortageReliabilityFloor < 0 || s.rules.shortageReliabilityFloor > 1 || s.rules.objectivePoints < 0 || s.rules.sciencePoints < 0 || s.rules.engineeringPoints < 0 || s.rules.efficiencyPoints < 0 || s.rules.reliabilityPoints < 0 || s.rules.dataPoints < 0)
             { Issue(r, Severity.Blocking, "scenario", "Scenario is incomplete or has invalid budget, duration or objective targets."); return r; }
             var orbit = s.orbits.FirstOrDefault(x => x.id == d.orbitId);
             var launcher = s.launchers.FirstOrDefault(x => x.id == d.launcherId);
@@ -32,16 +32,17 @@ namespace MissionSimulation
             {
                 b.massKg += c.massKg; b.cost += c.cost; b.powerProducedW += c.powerProducedW; b.powerUsedW += c.powerUsedW;
                 b.dataMBPerDay += c.dataMBPerDay; b.downlinkMBPerDay += c.downlinkMBPerDay;
-                b.fuelProvided += c.fuelProvided; b.fuelRequired += c.fuelRequired; b.science += c.science;
+                b.fuelProvided += c.fuelProvided; b.fuelRequired += c.fuelRequired;
+                if (Has(c.tags, s.objective.requiredInstrumentTag) && (c.destinations == null || c.destinations.Length == 0 || Has(c.destinations, s.destination))) b.science += c.science;
                 b.protection += c.protection; b.reliability *= Clamp(c.reliability);
                 if (c.destinations != null && c.destinations.Length > 0 && !Has(c.destinations, s.destination))
                     Issue(r, Severity.Warning, "destination", c.name + " is not suitable for " + s.destination + ".");
                 foreach (var tag in c.requiredTags ?? new string[0])
                     if (!selected.Exists(x => Has(x.tags, tag))) Issue(r, Severity.Warning, "support", c.name + " requires " + tag + ".");
             }
-            foreach (var tag in new[] { "bus", "power", "communications" })
+            foreach (var tag in s.requiredSystemTags)
                 if (!selected.Exists(x => Has(x.tags, tag))) Issue(r, Severity.Warning, "support", "Missing required spacecraft system: " + tag + ".");
-            if (!selected.Exists(x => Has(x.tags, s.objective.requiredInstrumentTag))) Issue(r, Severity.Warning, "instrument", "No instrument satisfies the objective.");
+            if (!selected.Exists(x => Has(x.tags, s.objective.requiredInstrumentTag) && (x.destinations == null || x.destinations.Length == 0 || Has(x.destinations, s.destination)))) Issue(r, Severity.Warning, "instrument", "No instrument satisfies the objective at this destination.");
             if (orbit != null)
             {
                 b.fuelRequired += orbit.fuelRequired; b.downlinkMBPerDay *= Math.Max(0, orbit.downlinkMultiplier);
@@ -70,9 +71,10 @@ namespace MissionSimulation
             var b = v.resources; var orbit = s.orbits.First(x => x.id == d.orbitId);
             float power = b.powerUsedW <= 0 ? 1 : Clamp(b.powerProducedW / b.powerUsedW);
             float fuel = b.fuelRequired <= 0 ? 1 : Clamp(b.fuelProvided / b.fuelRequired);
-            float support = v.issues.Exists(x => x.code == "support") ? 0.5f : 1f;
-            float suitable = v.issues.Exists(x => x.code == "instrument" || x.code == "destination" || x.code == "objective_orbit") ? 0f : 1f;
-            float reliability = b.reliability * (0.5f + 0.5f * power) * (0.5f + 0.5f * fuel);
+            float support = v.issues.Exists(x => x.code == "support") ? s.rules.missingSupportFactor : 1f;
+            float suitable = v.issues.Exists(x => x.code == "instrument" || x.code == "objective_orbit") ? 0f : 1f;
+            float floor = s.rules.shortageReliabilityFloor;
+            float reliability = b.reliability * (floor + (1f - floor) * power) * (floor + (1f - floor) * fuel);
             foreach (var h in s.hazards ?? new EnvironmentalHazard[0]) if (b.protection < h.requiredProtection) reliability *= Clamp(1 - h.reliabilityPenalty);
             float scienceFactor = 1, dataFactor = 1; var random = new Random(seed);
             foreach (var e in s.events ?? new MissionEvent[0]) if (random.NextDouble() < Clamp(e.probability))
@@ -88,12 +90,13 @@ namespace MissionSimulation
             float scienceProgress = Clamp(result.scienceDelivered / s.objective.requiredScience);
             float progress = Math.Min(dataProgress, scienceProgress);
             result.outcome = progress >= s.successThreshold ? MissionOutcome.Success : progress >= s.partialThreshold ? MissionOutcome.PartialSuccess : MissionOutcome.Failure;
-            Add(result, "Objective completion", 30 * progress, 30, "Completion is limited by the lower of science and returned-data progress.");
-            Add(result, "Scientific value", 20 * scienceProgress, 20, "Science reflects instrument value, orbit, resources, events and reliability.");
-            Add(result, "Engineering validity", 15 * Clamp(1f - v.issues.Count(x => x.severity == Severity.Warning) * 0.15f), 15, "Each design warning reduces engineering validity.");
-            Add(result, "Resource efficiency", 10 * Clamp(1f - b.cost / s.budget), 10, "Remaining budget contributes to resource efficiency.");
-            Add(result, "Reliability and risk", 10 * reliability, 10, "Reliability includes components, resource shortages, hazards and events.");
-            Add(result, "Data returned", 15 * dataProgress, 15, "Data returned is limited by production, downlink capacity and reliability.");
+            var rules = s.rules;
+            Add(result, "Objective completion", rules.objectivePoints * progress, rules.objectivePoints, "Completion is limited by the lower of science and returned-data progress.");
+            Add(result, "Scientific value", rules.sciencePoints * scienceProgress, rules.sciencePoints, "Science reflects suitable instruments, orbit, resources, events and reliability.");
+            Add(result, "Engineering validity", rules.engineeringPoints * Clamp(1f - v.issues.Count(x => x.severity == Severity.Warning) * rules.warningPenalty), rules.engineeringPoints, "Each design warning reduces engineering validity.");
+            Add(result, "Resource efficiency", rules.efficiencyPoints * Clamp(1f - b.cost / s.budget), rules.efficiencyPoints, "Remaining budget contributes to resource efficiency.");
+            Add(result, "Reliability and risk", rules.reliabilityPoints * reliability, rules.reliabilityPoints, "Reliability includes components, resource shortages, hazards and events.");
+            Add(result, "Data returned", rules.dataPoints * dataProgress, rules.dataPoints, "Data returned is limited by production, downlink capacity and reliability.");
             foreach (var issue in v.issues) result.explanations.Add(issue.message);
             result.explanations.Add(string.Format("Returned {0:F0} MB of {1:F0} MB required; delivered {2:F1} of {3:F1} science required.", result.dataReturnedMB, s.objective.requiredDataMB, result.scienceDelivered, s.objective.requiredScience));
             if (result.events.Count == 0) result.explanations.Add("No mission events occurred.");
