@@ -1,0 +1,6 @@
+{
+  "name": "MissionSimulation.Tests",
+  "references": ["MissionSimulation"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "includePlatforms": ["Editor"]
+}
