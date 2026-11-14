@@ -42,6 +42,23 @@ namespace MissionSimulation.Tests
             foreach (var engine in mission.engines) if (engine.id=="e1") engine.fuelUnits++;
             Assert.IsFalse(new PreLaunchCheckpointService().Restore("run-1",mission,saved).success);
         }
+        [Test] public void ChangedMissionCostRejectsOldCheckpoint()
+        {
+            var saved=Create().checkpoint;
+            foreach (var engine in mission.engines) if (engine.id=="e1") engine.costUsd++;
+            Assert.IsFalse(new PreLaunchCheckpointService().Restore("run-1",mission,saved).success);
+        }
+        [Test] public void ReorderingMissionOptionsDoesNotInvalidateCheckpoint()
+        {
+            var saved=Create().checkpoint;
+            System.Array.Reverse(mission.engines);
+            Assert.IsTrue(new PreLaunchCheckpointService().Restore("run-1",mission,saved).success);
+        }
+        [Test] public void LegacyCheckpointRequiresExplicitMigration()
+        {
+            var saved=Create().checkpoint; saved.version=1;
+            Assert.IsFalse(new PreLaunchCheckpointService().Restore("run-1",mission,saved).success);
+        }
         [Test] public void FuelFailureCanRestorePreLaunchSnapshot()
         {
             var checkpoint=Create().checkpoint;
