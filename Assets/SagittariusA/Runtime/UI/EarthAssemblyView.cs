@@ -10,7 +10,7 @@ using static SagittariusA.Gameplay.UI.EarthGarageView;
 
 namespace SagittariusA.Gameplay.UI
 {
-    // Interactive blockout: all mutations go through the same session as the garage.
+    // The sole configuration screen. Selecting a part immediately updates the saved ship.
     public sealed class EarthAssemblyView : MonoBehaviour
     {
         private static readonly string[] Groups = { "Launcher", "Nozzle", "Cover", "Engine", "Cargo bay", "Power", "Cargo" };
@@ -21,8 +21,8 @@ namespace SagittariusA.Gameplay.UI
         };
         private static readonly Color Accent = new Color(1, .43f, .04f);
         private EarthGameplaySession session;
-        private EarthOverlay overlay;
-        private RectTransform controls, viewport;
+        private GameFlowController flow;
+        private RectTransform controls, viewport, presets;
         private Text totals, feedback, candidateLabel;
         private RawImage display;
         private GameObject studio, ship;
@@ -32,20 +32,23 @@ namespace SagittariusA.Gameplay.UI
         private readonly List<(Collider collider, int group)> sockets = new List<(Collider, int)>();
         private readonly List<(Text label, int group)> socketLabels = new List<(Text, int)>();
         private int group;
-        private string candidate;
         private bool dirty;
         private float yaw = 22, pitch = 8, zoom = 6.4f;
 
-        public static void Open(Transform owner, EarthGameplaySession session)
+        public static void Create(Transform parent)
         {
-            var overlay = EarthOverlay.Open(owner, "Earth 3D assembly");
-            var view = overlay.gameObject.AddComponent<EarthAssemblyView>();
-            view.overlay = overlay; view.session = session;
-            view.candidate = session.Build.parts[0];
+            var root = Box(parent, "ShipAssembly", 0, 0, 1, 1, new Color(.025f, .035f, .055f));
+            var view = root.gameObject.AddComponent<EarthAssemblyView>();
+            view.flow = parent.GetComponentInParent<GameFlowController>();
+            view.session = view.flow.GetComponent<EarthGameplaySession>();
             view.CreateInterface(); view.CreateStudio();
-            session.Changed += view.OnChanged;
+            view.session.Changed += view.OnChanged;
             view.Refresh();
+            root.gameObject.AddComponent<GameScreenView>().Configure(GameScreen.Configuration, null, GameScreen.Configuration, null, GameScreen.Configuration);
+            root.gameObject.SetActive(false);
         }
+        private void OnEnable() { if (studio != null) studio.SetActive(true); dirty = true; }
+        private void OnDisable() { if (studio != null) studio.SetActive(false); }
         private void OnChanged() { dirty = true; }
         private void LateUpdate()
         {
@@ -61,41 +64,41 @@ namespace SagittariusA.Gameplay.UI
         }
         private void CreateInterface()
         {
-            Label(transform, "EARTH / SNAP-FIT ASSEMBLY", .025f, .92f, .7f, .05f, 20, Accent);
-            Label(transform, "BUILD YOUR SHIP", .025f, .845f, .6f, .07f, 38, Color.white);
-            var close = ActionButton(transform, "BACK TO GARAGE", .78f, .89f, .195f, .07f, overlay.Close, Accent);
-            EventSystem.current?.SetSelectedGameObject(close.gameObject);
+            Label(transform, "EARTH / SHIP ASSEMBLY", .025f, .945f, .6f, .035f, 18, Accent);
+            Label(transform, "CHOOSE YOUR SHIP", .025f, .875f, .6f, .065f, 38, Color.white);
+            ActionButton(transform, "BRIEFING", .65f, .90f, .12f, .065f, () => flow.Show(GameScreen.Briefing));
+            ActionButton(transform, "REVIEW LAUNCH", .78f, .90f, .195f, .065f, () => flow.Show(GameScreen.Review), Accent);
+            presets = Box(transform, "Ready-made ships", .025f, .785f, .95f, .085f, Color.clear);
             for (int i = 0; i < Groups.Length; i++)
             {
                 int index = i;
-                ActionButton(transform, Groups[i], .025f + i * .137f, .77f, .129f, .06f, () => ChooseGroup(index), new Color(.13f, .16f, .21f));
+                ActionButton(transform, Groups[i], .025f + i * .137f, .71f, .129f, .055f, () => SelectCategory(index), new Color(.13f, .16f, .21f));
             }
-            controls = Box(transform, "Part options", .025f, .16f, .26f, .58f, new Color(.055f, .07f, .10f));
+            controls = Box(transform, "Part options", .025f, .16f, .26f, .52f, new Color(.055f, .07f, .10f));
             var previewObject = new GameObject("3D viewport", typeof(RectTransform), typeof(RawImage));
             previewObject.transform.SetParent(transform, false);
             viewport = (RectTransform)previewObject.transform;
-            viewport.anchorMin = new Vector2(.30f, .16f); viewport.anchorMax = new Vector2(.74f, .74f);
+            viewport.anchorMin = new Vector2(.30f, .16f); viewport.anchorMax = new Vector2(.74f, .68f);
             viewport.offsetMin = viewport.offsetMax = Vector2.zero;
             display = previewObject.GetComponent<RawImage>();
             previewObject.AddComponent<RectMask2D>();
             viewport.gameObject.AddComponent<EarthAssemblyInput>().View = this;
-            ActionButton(transform, "ROTATE LEFT", .305f, .695f, .105f, .035f, () => Orbit(-70, 0));
-            ActionButton(transform, "ROTATE RIGHT", .412f, .695f, .105f, .035f, () => Orbit(70, 0));
-            ActionButton(transform, "ZOOM IN", .519f, .695f, .105f, .035f, () => Zoom(1));
-            ActionButton(transform, "ZOOM OUT", .626f, .695f, .105f, .035f, () => Zoom(-1));
-            Label(transform, "Drag to rotate · Scroll to zoom · Click the orange attachment point to fit", .30f, .105f, .44f, .045f, 17, Color.white);
+            ActionButton(transform, "ROTATE LEFT", .305f, .635f, .105f, .035f, () => Orbit(-70, 0));
+            ActionButton(transform, "ROTATE RIGHT", .412f, .635f, .105f, .035f, () => Orbit(70, 0));
+            ActionButton(transform, "ZOOM IN", .519f, .635f, .105f, .035f, () => Zoom(1));
+            ActionButton(transform, "ZOOM OUT", .626f, .635f, .105f, .035f, () => Zoom(-1));
+            Label(transform, "Click a part to swap instantly · Drag to rotate · Scroll to zoom", .30f, .105f, .44f, .045f, 17, Color.white);
             Label(transform, "PROTOTYPE SHAPES / EXPLODED VIEW", .30f, .065f, .44f, .035f, 15, new Color(.65f, .72f, .8f));
-            var dash = Box(transform, "Fitted ship totals", .755f, .16f, .22f, .58f, new Color(.055f, .07f, .10f));
+            var dash = Box(transform, "Fitted ship totals", .755f, .16f, .22f, .52f, new Color(.055f, .07f, .10f));
             Label(dash, "FITTED SHIP / LIVE TOTALS", .06f, .87f, .88f, .09f, 20, Accent);
-            totals = Label(dash, "", .06f, .40f, .88f, .46f, 24, Color.white);
+            totals = Label(dash, "", .06f, .40f, .88f, .46f, 22, Color.white);
             feedback = Label(dash, "", .06f, .04f, .88f, .34f, 20, Color.white);
             candidateLabel = Label(transform, "", .025f, .035f, .26f, .10f, 18, Color.white);
         }
-        private void ChooseGroup(int index)
+        public void SelectCategory(int index)
         {
-            group = index;
-            candidate = group == 6 ? session.Catalog.cargo[0].id : session.Build.parts[group];
-            Refresh();
+            if (index < 0 || index > 6) return;
+            group = index; dirty = true;
         }
         private void CreateStudio()
         {
@@ -137,9 +140,20 @@ namespace SagittariusA.Gameplay.UI
         private void Refresh()
         {
             var focused = EventSystem.current?.currentSelectedGameObject;
-            string focusName = focused != null && focused.transform.IsChildOf(controls) ? focused.name : null;
+            string focusName = focused != null && (focused.transform.IsChildOf(controls) || focused.transform.IsChildOf(presets)) ? focused.name : null;
             foreach (Transform child in controls) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
             var build = session.Build;
+            foreach (Transform child in presets) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
+            for (int i = 0; i < EarthReadyBuild.All.Count; i++)
+            {
+                var ready = EarthReadyBuild.All[i];
+                var button = ActionButton(presets, ready.Name + "\n" + ready.Summary,
+                    i * .252f, 0, .244f, 1, () => session.LoadReadyBuild(ready.Id),
+                    ready.Matches(build) ? new Color(.36f, .20f, .10f) : new Color(.13f, .16f, .21f));
+                button.name = "Ready-" + ready.Id;
+                button.interactable = !session.Busy && !session.Launched;
+                button.GetComponentInChildren<Text>().fontSize = 18;
+            }
             var parts = session.Catalog.Group(group);
             float row = group == 6 ? .13f : .185f;
             for (int i = 0; i < parts.Length; i++)
@@ -149,33 +163,28 @@ namespace SagittariusA.Gameplay.UI
                 float y = .96f - (i + 1) * row;
                 string label = (fitted ? "[FITTED] " : "") + part.id.ToUpperInvariant() + " / " + part.name + "\n" + Money(part.costUsd);
                 var choose = ActionButton(controls, label, .04f, y, .71f, row - .015f,
-                    () => { candidate = part.id; Refresh(); },
-                    part.id == candidate ? new Color(.36f, .20f, .10f) : new Color(.10f, .13f, .18f));
+                    () => { if (group == 6) session.ToggleCargo(part.id); else session.SelectPart(group, part.id); },
+                    fitted ? new Color(.36f, .20f, .10f) : new Color(.10f, .13f, .18f));
                 choose.GetComponentInChildren<Text>().fontSize = 18;
                 choose.name = "Choose-" + part.id;
+                choose.interactable = !session.Busy && !session.Launched;
                 ActionButton(controls, "INFO", .77f, y, .19f, row - .015f,
                     () => EarthPartDescription.Open(transform, part, group), new Color(.16f, .20f, .27f));
             }
-            var fit = ActionButton(controls, "FIT TO MATCHING POINT", .04f, .055f, group == 6 ? .59f : .92f, .085f, () => Fit(group), Accent);
-            fit.GetComponentInChildren<Text>().fontSize = 17;
-            fit.interactable = !session.Busy && !session.Launched;
-            if (group == 6)
-            {
-                var remove = ActionButton(controls, "REMOVE", .65f, .055f, .31f, .085f, () => session.SetCargo(candidate, false), new Color(.35f, .12f, .10f));
-                remove.interactable = !session.Busy && !session.Launched && build.cargo.Contains(candidate);
-                remove.GetComponentInChildren<Text>().fontSize = 16;
-            }
-            var p = parts.First(x => x.id == candidate);
-            candidateLabel.text = "Selected: " + p.name + "\nChoose a part, then fit it. Browsing does not change totals.";
+            Label(controls, group == 6 ? "Click to add or remove cargo." : "Click a part to replace it immediately.",
+                .04f, .045f, .92f, .10f, 18, Color.white);
+            var matching = EarthReadyBuild.All.FirstOrDefault(p => p.Matches(build));
+            candidateLabel.text = matching == null ? "CUSTOM BUILD\nLive model and totals follow your choices." :
+                matching.Name + "\n" + matching.Summary;
             var a = session.Assessment;
             totals.text = $"Cost  {Money(a.costUsd)} / {Money(session.Catalog.budgetUsd)}\n\nMass  {a.massKg:N0} kg\nCapacity  {a.payloadKg:N0} kg\nMargin  {a.MassMarginKg:N0} kg\n\nCargo  {a.slotsUsed} / {a.slotsAvailable}\nPower  {session.Catalog.busPowerKw} / {a.supplyKw} kW\nBattery  {a.batteryKwh} kWh\nFuel  {a.fuelUnits} units";
             var hardware = a.issues.FirstOrDefault(x => x.code != "cargo-check" && x.code != "power-check" && x.code != "landing-check");
-            feedback.text = hardware != null ? hardware.message : "Choose a part and click its highlighted attachment point.\n\nCargo locks and launch checks are completed separately.";
+            feedback.text = hardware != null ? hardware.message : "Hardware ready.\n\nContinue to Review Launch for cargo, power and landing checks.";
             feedback.color = hardware?.blocksLaunch == true ? new Color(1, .45f, .35f) : Color.white;
             RebuildShip(build);
             if (focusName != null && EventSystem.current != null)
             {
-                var buttons = controls.GetComponentsInChildren<Button>();
+                var buttons = controls.GetComponentsInChildren<Button>().Concat(presets.GetComponentsInChildren<Button>()).ToArray();
                 var next = buttons.FirstOrDefault(b => b.name == focusName && b.interactable) ?? buttons.FirstOrDefault(b => b.interactable);
                 EventSystem.current.SetSelectedGameObject(next?.gameObject);
             }
@@ -245,16 +254,7 @@ namespace SagittariusA.Gameplay.UI
             float nearest = float.MaxValue; int picked = -1;
             foreach (var target in sockets)
                 if (target.collider.Raycast(ray, out var hit, 60) && hit.distance < nearest) { picked = target.group; nearest = hit.distance; }
-            if (picked >= 0) Fit(picked);
-        }
-        private void Fit(int socket)
-        {
-            if (session.Busy || session.Launched) { feedback.text = "Assembly is locked during an activity or after launch."; return; }
-            if (socket != group) { feedback.text = "That is the " + Groups[socket] + " point. Fit this part to the highlighted " + Groups[group] + " point."; return; }
-            if (group == 6) session.SetCargo(candidate, true); else session.SelectPart(group, candidate);
-            // Physics sync makes another immediate socket click use the fitted geometry.
-            dirty = false; Refresh(); Physics.SyncTransforms();
-            feedback.text = candidate.ToUpperInvariant() + " fitted. Live totals updated.\n\n" + feedback.text;
+            if (picked >= 0) SelectCategory(picked);
         }
         private void OnDestroy()
         {

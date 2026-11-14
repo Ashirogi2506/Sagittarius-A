@@ -1,23 +1,34 @@
-# Earth assembly prototype
+# Earth ship configuration
 
-Open the garage and choose **Open 3D Assembly**. Pick a category and part, then click the matching orange attachment point. **Fit to Matching Point** provides the same action for keyboard/controller navigation. Drag to rotate and scroll to zoom, or use the rotate/zoom buttons.
+GameScreen.Configuration opens EarthAssemblyView directly. The separate list garage and manual Fit step have been removed. Briefing, Continue Expedition, report back buttons and repair guidance all return to this same screen.
 
-The default saved ship is already fitted. This increment supports replacing its six hardware groups and adding/removing cargo; it is not an empty-frame construction sequence. Cargo appears beside the bay in this exploded assembly view. Packing and locking it remains the cargo minigame's responsibility.
+Choose a ready-made ship, then optionally customize it. Clicking hardware swaps it immediately. Clicking cargo adds/removes it. The 3D model, selected indicators, limits and saved build update before the next rendered frame. INFO only opens a description. Clicking the 3D model selects its category; it never changes the loadout.
 
-## Live state
+## Ready-made builds
 
-Both the list garage and 3D assembly use EarthGameplaySession. Fitting updates that state, saves it and publishes Changed; active totals refresh before the next rendered frame. Browsing candidates, opening descriptions and rotating the model never change the build or its totals. Repeatedly fitting the same cargo is idempotent. Remove is a separate action.
+These are assembled hardware configurations, not completed mission checks. All include the required panel and kit and fit the current catalog's budget, mass and compatibility limits.
 
-The totals reflect fitted parts, not preview candidates. A socket enforces the selected category. The existing simulation adapter still evaluates nozzle mount, cover clearance, mass, budget and other constraints; incompatible configurations show warnings and block launch. The temporary model's dimensions are illustrative and do not perform physical collision/clearance validation.
+| Model | Purpose | Cost | Mass / capacity | Capacity / reserves |
+|---|---|---|---|---|
+| Balanced | Lower-cost starting ship | $93M | 9,570 / 10,100 kg | 3 cargo spaces, 15 fuel, 6 kWh |
+| Cargo-focused | More cargo space | $106M | 9,920 / 10,950 kg | 6 cargo spaces, 15 fuel, 6 kWh |
+| Long-range | More fuel and battery | $107M | 10,220 / 11,250 kg | 3 cargo spaces, 30 fuel, 12 kWh |
+| High-power | Laser-equipped ship | $114M | 10,270 / 11,130 kg | 4 cargo spaces, 15 fuel, 8 kW output |
 
-## Description files
+EarthReadyBuild defines stable IDs and returns independent loadout copies. EarthGameplaySession.LoadReadyBuild saves the selection and clears previous checks when the loadout changes. Selecting the already-fitted model leaves its checks intact. Customizing a model changes its label to Custom Build. No save migration is necessary: model identity is inferred from the saved parts and cargo.
 
-Each hardware and cargo entry supports an optional plain-text **description** field in Resources/FarSignalEarth.json. INFO opens the same description in both views. Missing copy explicitly shows “Description coming soon.” Supply the approved prose keyed by the existing IDs (l1–l4, n1–n4, f1–f4, e1–e4, c1–c4, p1–p4, panel, kit, laser, battery, spares, fuel). The UI scrolls long descriptions and does not parse markup.
+Review Launch still requires cargo locks, a power test and a landing plan. The old overweight demo remains available only as a developer test fixture; it is not offered as a ready-made ship.
 
-## Replace prototype geometry
+## Controls and state
 
-The current shapes are an interactive blockout, not final spacecraft art. Hardware prefabs can be supplied under Resources/EarthParts/<partId>.prefab. EarthAssemblyView loads them by catalog ID. Use a local attachment origin, upright +Y and neutral local transform. Keep scripts, cameras and lights out of these visual prefabs. Materials should match the project's rendering pipeline.
+Drag to rotate, scroll to zoom, or use the rotate/zoom buttons. Presets and part buttons support standard UI navigation. No dragging parts or selecting attachment points is required.
 
-Current attachment positions and click targets are schematic and defined in EarthAssemblyView. Tune them to the delivered models; custom-model bounds and attachment markers still need an art integration pass. The dedicated preview uses layer 31, an isolated studio at x=10000, a RenderTexture and a camera. Do not use layer 31 for unrelated gameplay geometry. The camera, shapes, render texture and temporary materials are released when the view closes.
+The model reads the same EarthGameplaySession used by validation and reports. Busy/launched states lock edits. The preview studio and camera deactivate when leaving configuration and resume on return. Descriptions are modal and do not mutate selections.
 
-For a player build, include the chosen preview shader/material in build assets (Standard for the built-in pipeline, Universal Render Pipeline/Lit for URP). The preview chooses based on the active pipeline, including quality overrides. Final prefabs should carry explicit material references. This increment is verified in Editor Play Mode; standalone build validation remains part of the art integration pass.
+## Descriptions and final artwork
+
+Each hardware/cargo entry supports an optional plain-text description in Resources/FarSignalEarth.json. INFO uses that text; missing content says Description coming soon. Copy is still awaiting the user's files.
+
+Shapes are temporary blockout art. Hardware prefabs can replace them at Resources/EarthParts/<partId>.prefab. Use a local attachment origin, upright +Y, neutral local transform and materials matching the active rendering pipeline. Visual prefabs should have no scripts, cameras or lights. Tune the schematic attachment positions and click target bounds when the final models arrive.
+
+The preview uses layer 31, an isolated studio at x=10000, a RenderTexture and a camera. Reserve layer 31 for this view. Generated objects, texture and materials are released with the screen. A standalone build needs the preview shader/material included in build assets and its own visual test; current verification is Editor Play Mode.

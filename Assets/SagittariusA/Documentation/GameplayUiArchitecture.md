@@ -4,17 +4,17 @@ Unity 6.6 / 6000.6.9f1. Source: the Earth section and embedded catalog in FarSig
 
 ## Implemented flow
 
-Commander profile -> route -> Khulan briefing -> interactive Earth garage -> launch checklist -> launch authorization -> Earth log -> teammate transit -> Moon arrival handoff.
+Commander profile -> route -> Khulan briefing -> 3D ship configuration -> launch checklist -> launch authorization -> Earth log -> teammate transit -> Moon arrival handoff.
 
-Continue Expedition resumes the saved garage, Earth log after launch, or Moon handoff after transit. Launch authorization records a validated manifest; physical launch, orbit and flight simulation are not implemented here. Moon arrival is an integration screen, not a playable lunar scene.
+Continue Expedition resumes the saved 3D configuration, Earth log after launch, or Moon handoff after transit. Launch authorization records a validated manifest; physical launch, orbit and flight simulation are not implemented here. Moon arrival is an integration screen, not a playable lunar scene.
 
-The garage has six hardware categories (four choices each), six cargo items, live totals, repair guidance, and starter / laser / overweight presets. Red checks block launch; yellow checks remain visible. Cargo, power and landing checks require a registered minigame runner. Missing modules display MODULE PENDING and cannot grant completion.
+Configuration has six hardware categories (four choices each), six cargo items, live totals, and Balanced / Cargo-focused / Long-range / High-power ready models. Red checks block launch; yellow checks remain visible. Cargo, power and landing checks require a registered minigame runner. Missing modules display MODULE PENDING and cannot grant completion.
 
-Open 3D Assembly provides a snap-fit blockout sharing the same session. Candidate browsing leaves totals unchanged; fitting or removing a part updates them before the next frame. INFO buttons open optional catalog descriptions in both views. See EarthAssembly.md for controls, description fields and art integration.
+EarthAssemblyView is the sole configuration screen. Clicking a part changes the saved ship, 3D model and totals immediately; no separate fitting action is required. INFO buttons open optional catalog descriptions. See EarthAssembly.md for controls, ready models and art integration.
 
 ## Ownership
 
-- EarthGarageView displays and edits selections; it does not calculate ship limits.
+- EarthAssemblyView edits the configuration; EarthGarageView renders the checklist and reports. Neither calculates ship limits.
 - EarthGameplaySession coordinates draft state, check invalidation, minigame callbacks and launch gating.
 - IEarthSimulationAdapter is the replacement point for the simulation engineer. DraftEarthSimulationAdapter reproduces this brief's rules for local development. It is not flight physics.
 - IEarthMinigameRunner is the teammate boundary; see EarthMinigameIntegration.md.
@@ -26,7 +26,7 @@ Open 3D Assembly provides a snap-fit blockout sharing the same session. Candidat
 
 Local prototype state uses PlayerPrefs key FarSignal.EarthGarageDraft.v1, separate from the existing profile keys. Save after changes, accepted checks, launch and transit. Load rejects incompatible version, unknown/duplicate IDs and missing structural fields. It is not a production campaign save. IEarthDraftStore is injectable at session initialization for the team's persistence service and isolated tests.
 
-Changing cargo or bay clears cargo placements and locks. Changing power or laser cargo resets the power test. All changes reassess the current landing plan and hardware limits. Selecting a preset resets its checks.
+Changing cargo or bay clears cargo placements and locks. Changing power or laser cargo resets the power test. All changes reassess the current landing plan and hardware limits. Switching to a different ready model resets its checks; reselecting the current model preserves them.
 
 A minigame receives a snapshot and a unique run ID plus build revision. Only matching callbacks are accepted. Cancel, stale and duplicate callbacks cannot advance a stage. Only the relevant check fields are copied back. In-progress activity checkpoints are not persisted yet; quitting during an activity retries that activity from the last accepted check.
 

@@ -34,6 +34,26 @@ namespace SagittariusA.Gameplay.Data
         public List<string> cargo = new List<string> { "panel", "kit" };
         public EarthBuild Copy() => new EarthBuild { parts = (string[])parts.Clone(), cargo = new List<string>(cargo) };
     }
+    public sealed class EarthReadyBuild
+    {
+        public readonly string Id, Name, Summary;
+        private readonly string[] parts, cargo;
+        private EarthReadyBuild(string id, string name, string summary, string[] parts, params string[] cargo)
+        { Id = id; Name = name; Summary = summary; this.parts = parts; this.cargo = cargo; }
+        public EarthBuild Create() => new EarthBuild { parts = (string[])parts.Clone(), cargo = new List<string>(cargo) };
+        public bool Matches(EarthBuild build) => build.parts.SequenceEqual(parts) &&
+            build.cargo.Count == cargo.Length && cargo.All(build.cargo.Contains);
+        public static readonly IReadOnlyList<EarthReadyBuild> All = Array.AsReadOnly(new[] {
+            new EarthReadyBuild("balanced", "BALANCED", "Lower cost / essential cargo",
+                new[] { "l1", "n1", "f1", "e1", "c1", "p1" }, "panel", "kit"),
+            new EarthReadyBuild("cargo", "CARGO-FOCUSED", "6 cargo spaces / room to expand",
+                new[] { "l2", "n2", "f3", "e1", "c3", "p1" }, "panel", "kit"),
+            new EarthReadyBuild("range", "LONG-RANGE", "30 fuel / 12 kWh battery",
+                new[] { "l2", "n2", "f1", "e2", "c1", "p3" }, "panel", "kit"),
+            new EarthReadyBuild("power", "HIGH-POWER", "8 kW output / laser included",
+                new[] { "l2", "n2", "f2", "e1", "c2", "p2" }, "panel", "kit", "laser")
+        });
+    }
     [Serializable] public sealed class CargoPlacement
     {
         public string itemId;

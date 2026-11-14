@@ -61,6 +61,13 @@ namespace SagittariusA.Gameplay.Editor
                 var store = new MemoryStore();
                 var s = Create(store);
                 Check(!s.TryLaunch(), "Unchecked build must not launch.");
+                s.LoadReadyBuild("cargo");
+                Check(s.Assessment.slotsAvailable == 6 && !s.Assessment.CanLaunch,
+                    "Ready model loads instantly but preserves required launch checks.");
+                int presetWrites = store.Writes;
+                s.LoadReadyBuild("cargo");
+                Check(store.Writes == presetWrites, "Selecting the current ready model must not reset its state.");
+                Check(EarthReadyBuild.All[1].Matches(Create(store).Build), "Ready model must survive reload.");
                 s.LoadPreset(2);
                 var restored = Create(store);
                 Check(restored.Assessment.MassMarginKg == -340, "Saved build must restore.");

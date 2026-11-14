@@ -17,6 +17,18 @@ EarthChecks Ready(EarthBuild build)
     return result;
 }
 var build = new EarthBuild();
+foreach (var preset in EarthReadyBuild.All)
+{
+    var readyBuild = preset.Create();
+    var readyAssessment = simulation.Assess(catalog, readyBuild, Ready(readyBuild));
+    Check(readyAssessment.CanLaunch && readyAssessment.issues.Count == 0, preset.Name + " is within all hardware limits");
+    var untouched = preset.Create(); readyBuild.parts[0] = "changed";
+    Check(preset.Matches(untouched), preset.Name + " returns independent ship copies");
+}
+var cargoPreset = simulation.Assess(catalog, EarthReadyBuild.All[1].Create(), new EarthChecks());
+Check(cargoPreset.costUsd == 106000000 && cargoPreset.slotsAvailable == 6 && cargoPreset.MassMarginKg == 1030, "cargo-focused has six spaces and a safe mass margin");
+var rangePreset = simulation.Assess(catalog, EarthReadyBuild.All[2].Create(), new EarthChecks());
+Check(rangePreset.costUsd == 107000000 && rangePreset.fuelUnits == 30 && rangePreset.batteryKwh == 12, "long-range has larger fuel and battery reserves");
 var a = simulation.Assess(catalog, build, new EarthChecks());
 Check(a.costUsd == 93000000 && a.massKg == 9570 && a.payloadKg == 10100, "starter matches latest brief");
 Check(!a.CanLaunch && a.issues.Count(i => i.code.EndsWith("-check")) == 3, "unplayed minigames block launch");

@@ -145,6 +145,14 @@ namespace SagittariusA.Gameplay.Flow
         }
         private void ClearPower()
         { draft.checks.powerTestCompleted = draft.checks.cabinOn = draft.checks.radioOn = draft.checks.laserTested = false; }
+        public void LoadReadyBuild(string id)
+        {
+            if (Busy || Launched) return;
+            var preset = EarthReadyBuild.All.FirstOrDefault(p => p.Id == id);
+            if (preset == null || preset.Matches(draft.build)) return;
+            draft.build = preset.Create(); draft.checks = new EarthChecks();
+            Mutated();
+        }
         public void LoadPreset(int preset)
         {
             if (Busy || Launched) return;

@@ -493,7 +493,7 @@ namespace SagittariusA.Gameplay.Flow
 
             Image statusBar = CreateImage("ProgramStatusAccent", panel.transform, new Color(1f, 0.43f, 0.04f, 1f));
             Stretch(statusBar.rectTransform, new Vector2(0.047f, 0.075f), new Vector2(0.049f, 0.11f), Vector2.zero, Vector2.zero);
-            CreateLabel(panel.transform, "EXPEDITION STATUS: EARTH GARAGE AVAILABLE", 15, FontStyle.Normal, TextColor, new Vector2(0.06f, 0.06f), new Vector2(0.53f, 0.125f));
+            CreateLabel(panel.transform, "EXPEDITION STATUS: SHIP ASSEMBLY AVAILABLE", 15, FontStyle.Normal, TextColor, new Vector2(0.06f, 0.06f), new Vector2(0.53f, 0.125f));
 
             GameScreenView view = panel.gameObject.AddComponent<GameScreenView>();
             view.Configure(GameScreen.MainMenu, startButton, primaryTarget, null, GameScreen.MainMenu);

@@ -23,11 +23,11 @@ namespace SagittariusA.Gameplay.UI
         private RectTransform body;
         private Text status, subtitle;
         private Button primary;
-        private int category;
         private bool redraw;
 
         public static void Create(Transform parent, GameScreen screen)
         {
+            if (screen == GameScreen.Configuration) { EarthAssemblyView.Create(parent); return; }
             var panel = Box(parent, screen + "Gameplay", .025f, .04f, .95f, .92f, Ink);
             var view = panel.gameObject.AddComponent<EarthGarageView>();
             view.flow = parent.GetComponentInParent<GameFlowController>();
@@ -45,26 +45,18 @@ namespace SagittariusA.Gameplay.UI
         private void BuildShell()
         {
             Label(transform, "FAR SIGNAL  /  EARTH  /  THE MOON CALL", .03f, .92f, .94f, .045f, 18, Orange);
-            string title = screen == GameScreen.Configuration ? "SHIP GARAGE" : screen == GameScreen.Review ? "LAUNCH CHECKLIST" :
+            string title = screen == GameScreen.Review ? "LAUNCH CHECKLIST" :
                 screen == GameScreen.Simulation ? "LAUNCH AUTHORIZED" : screen == GameScreen.Results ? "EARTH FLIGHT LOG" : "MOON — POLE-7 ARRIVAL";
             Label(transform, title, .03f, .84f, .94f, .075f, 38, Color.white);
-            if (screen == GameScreen.Configuration)
-                ActionButton(transform, "OPEN 3D ASSEMBLY", .72f, .84f, .25f, .07f,
-                    () => EarthAssemblyView.Open(transform, session), Orange);
-            subtitle = Label(transform, screen == GameScreen.Configuration ? "Compare parts, fit the ship, and prepare the cargo for Pole-7." :
-                "Commander " + PlayerPrefs.GetString("FarSignal.CommanderName", "Alex"), .03f, .79f, .94f, .045f, 19, Muted);
+            subtitle = Label(transform, "Commander " + PlayerPrefs.GetString("FarSignal.CommanderName", "Alex"), .03f, .79f, .94f, .045f, 19, Muted);
             body = Box(transform, "Content", .03f, .14f, .94f, .63f, Color.clear);
             status = Label(transform, "", .03f, .025f, .52f, .09f, 17, Muted);
-            bool garage = screen == GameScreen.Configuration;
-            string back = garage ? "BRIEFING" : "SHIP GARAGE";
-            Action backAction = () => flow.Show(garage ? GameScreen.Briefing : GameScreen.Configuration);
-            ActionButton(transform, back, .57f, .035f, .17f, .075f, backAction);
+            ActionButton(transform, "SHIP ASSEMBLY", .57f, .035f, .17f, .075f, () => flow.Show(GameScreen.Configuration));
             primary = ActionButton(transform, "", .76f, .035f, .21f, .075f, Primary, Orange);
         }
         private void Primary()
         {
-            if (screen == GameScreen.Configuration) flow.Show(GameScreen.Review);
-            else if (screen == GameScreen.Review) { if (session.TryLaunch()) flow.Show(GameScreen.Simulation); }
+            if (screen == GameScreen.Review) { if (session.TryLaunch()) flow.Show(GameScreen.Simulation); }
             else if (screen == GameScreen.Simulation) flow.Show(GameScreen.Results);
             else if (screen == GameScreen.Results)
             {
@@ -80,13 +72,10 @@ namespace SagittariusA.Gameplay.UI
             // Deactivate immediately; Destroy is deferred until the end of the frame.
             foreach (Transform child in body) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
             var a = session.Assessment;
-            if (screen != GameScreen.Configuration)
-                subtitle.text = "Commander " + PlayerPrefs.GetString("FarSignal.CommanderName", "Alex");
+            subtitle.text = "Commander " + PlayerPrefs.GetString("FarSignal.CommanderName", "Alex");
             status.text = session.Notice ?? "Draft game values · simulation adapter awaiting team review";
-            if (screen == GameScreen.Configuration) RenderGarage(a);
-            else RenderReport(a);
-            primary.GetComponentInChildren<Text>().text = screen == GameScreen.Configuration ? "REVIEW LAUNCH" :
-                screen == GameScreen.Review ? (session.Launched ? "VIEW LAUNCH" : "LAUNCH") :
+            RenderReport(a);
+            primary.GetComponentInChildren<Text>().text = screen == GameScreen.Review ? (session.Launched ? "VIEW LAUNCH" : "LAUNCH") :
                 screen == GameScreen.Simulation ? "VIEW FLIGHT LOG" : screen == GameScreen.Results ?
                 (session.TransitCompleted ? "MOON ARRIVAL" : "START TRANSIT") : "EARTH LOG";
             primary.interactable = !session.Busy && (screen != GameScreen.Review || a.CanLaunch) &&
@@ -97,46 +86,6 @@ namespace SagittariusA.Gameplay.UI
                 var focus = buttons.FirstOrDefault(b => b.name == selectedName) ?? buttons.FirstOrDefault();
                 EventSystem.current.SetSelectedGameObject(focus == null ? null : focus.gameObject);
             }
-        }
-        private void RenderGarage(EarthAssessment a)
-        {
-            var b = session.Build;
-            string[] presets = { "STARTER · $93M", "LASER · $114M", "FUEL · OVERWEIGHT" };
-            for (int i = 0; i < 3; i++)
-            { int preset = i; var button = ActionButton(body, presets[i], i * .215f, .91f, .205f, .085f, () => session.LoadPreset(preset)); button.interactable = !session.Launched && !session.Busy; }
-            Label(body, "BUILD OPTIONS", 0, .83f, .19f, .06f, 16, Orange);
-            for (int i = 0; i < Categories.Length; i++)
-            {
-                int index = i;
-                ActionButton(body, Categories[i], 0, .72f - i * .102f, .19f, .087f, () => { category = index; redraw = true; }, category == i ? new Color(.36f, .20f, .11f) : Card);
-            }
-            Label(body, Categories[category].ToUpperInvariant() + "  /  SELECT A PART", .215f, .82f, .43f, .07f, 18, Orange);
-            var options = session.Catalog.Group(category);
-            float height = category == 6 ? .115f : .18f;
-            for (int i = 0; i < options.Length; i++)
-            {
-                var part = options[i]; bool selected = category == 6 ? b.cargo.Contains(part.id) : b.parts[category] == part.id;
-                int group = category;
-                float y = .80f - (i + 1) * (height + .016f);
-                var button = ActionButton(body, "", .215f, y, .35f, height,
-                    () => { if (category == 6) session.ToggleCargo(part.id); else session.SelectPart(category, part.id); }, selected ? new Color(.23f, .16f, .10f) : Card);
-                button.interactable = !session.Launched && !session.Busy;
-                button.name = part.id;
-                Label(button.transform, (selected ? "[SELECTED]  " : "") + part.id.ToUpperInvariant() + "  ·  " + part.name,
-                    .025f, .54f, .95f, .40f, category == 6 ? 17 : 20, Color.white);
-                Label(button.transform, Specs(part, category), .025f, .04f, .95f, .49f, category == 6 ? 16 : 18, Muted);
-                var info = ActionButton(body, "INFO", .57f, y, .075f, height,
-                    () => EarthPartDescription.Open(transform, part, group));
-                info.name = "Description-" + part.id;
-            }
-            var dashboard = Box(body, "Resources", .67f, 0, .33f, 1, Card);
-            Label(dashboard, "LIVE SHIP TOTALS", .06f, .91f, .88f, .07f, 20, Orange);
-            Label(dashboard, $"Cost       {Money(a.costUsd)} / {Money(session.Catalog.budgetUsd)}\n" +
-                $"Mass     {a.massKg:N0} / {a.payloadKg:N0} kg\n" +
-                $"Margin   {a.MassMarginKg:N0} kg\nCargo    {a.slotsUsed} / {a.slotsAvailable} spaces\n" +
-                $"Base load / output   3 / {a.supplyKw} kW\nBattery   {a.batteryKwh} kWh\nFuel         {a.fuelUnits} units", .06f, .47f, .88f, .43f, 21, Color.white);
-            Label(dashboard, "CHECKS & NEXT ACTIONS · SCROLL", .06f, .39f, .88f, .065f, 16, Orange);
-            Issues(dashboard, a, .04f, .025f, .92f, .36f);
         }
         private void RenderReport(EarthAssessment a)
         {
@@ -195,7 +144,7 @@ namespace SagittariusA.Gameplay.UI
             foreach (var issue in a.issues)
             {
                 var button = ActionButton(content, (issue.blocksLaunch ? "[HOLD] " : "[NOTE] ") + issue.message, 0, 0, 1, 1,
-                    () => { category = issue.category; flow.Show(GameScreen.Configuration); var garage = flow.GetComponentsInChildren<EarthGarageView>(true).First(v => v.screen == GameScreen.Configuration); garage.category = issue.category; garage.RequestRefresh(); });
+                    () => { flow.Show(GameScreen.Configuration); flow.GetComponentInChildren<EarthAssemblyView>(true).SelectCategory(issue.category); });
                 var label = button.GetComponentInChildren<Text>(); label.fontSize = 19; label.alignment = TextAnchor.MiddleLeft; label.color = issue.blocksLaunch ? Red : Orange;
                 button.gameObject.AddComponent<LayoutElement>().preferredHeight = screen == GameScreen.Configuration ? 105 : 85;
             }
