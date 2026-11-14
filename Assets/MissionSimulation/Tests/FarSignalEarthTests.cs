@@ -66,5 +66,32 @@ namespace MissionSimulation.Tests
             design.cargo[0].startSlot=int.MaxValue;
             Assert.IsTrue(simulator.Validate(scenario,design).issues.Any(x=>x.code=="cargo_slots"));
         }
+        [Test] public void MissingMissionOrDesignReturnsBlockingIssue()
+        {
+            Assert.AreEqual(LaunchOutcome.Blocked, simulator.Evaluate(null, design).outcome);
+            Assert.AreEqual(LaunchOutcome.Blocked, simulator.Evaluate(scenario, null).outcome);
+        }
+        [Test] public void InvalidScenarioEntriesAreRejected()
+        {
+            scenario.cargo[0] = null;
+            Assert.IsTrue(simulator.Validate(scenario,design).issues.Any(x => x.code == "scenario"));
+        }
+        [Test] public void DuplicateIdsAreRejected()
+        {
+            scenario.cargo[1].id = scenario.cargo[0].id;
+            Assert.IsTrue(simulator.Validate(scenario,design).issues.Any(x => x.code == "scenario"));
+        }
+        [Test] public void NonFiniteAndNegativeValuesAreRejected()
+        {
+            scenario.busPowerKw = float.NaN;
+            Assert.IsFalse(simulator.Validate(scenario, design).CanLaunch);
+            scenario.busPowerKw = 3; scenario.engines[0].massKg = -1;
+            Assert.IsFalse(simulator.Validate(scenario, design).CanLaunch);
+        }
+        [Test] public void CostOverflowReturnsIssueInsteadOfWrapping()
+        {
+            scenario.busCostUsd = long.MaxValue;
+            Assert.IsTrue(simulator.Validate(scenario,design).issues.Any(x => x.code == "scenario"));
+        }
     }
 }

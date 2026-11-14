@@ -25,4 +25,6 @@ Cargo slots are zero-based. Each item occupies a contiguous run starting at `sta
 
 `Evaluate` reports blocked, ready, or ready with warnings, and returns an independent copy of selected items for later use. It is a readiness result: it does not assert the ship has launched or reached orbit. The caller owns persistence and any later flight outcome.
 
+Missing mission or design data produces a blocking issue. The validator rejects missing lists, null entries, duplicate or blank IDs, invalid numeric values and cost overflow; malformed data should be corrected by the scenario owner. Selectors and cargo IDs are exact and case-sensitive. A report that is blocked may contain partial resource totals and should not be treated as a launchable design.
+
 The source draft does not define cargo lock state, cabin/radio checks, exact landing timing, flight duration, flight events, carryover persistence, scores, or a rule for whether all fuel may be spent on landing. Those interactions need agreement with their respective owners; this report is a launch design preview, not a full mission result. No dialogue or visual assets are changed. Values and narrative remain under the scenario owner's review.

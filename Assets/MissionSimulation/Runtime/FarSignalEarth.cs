@@ -62,6 +62,27 @@ namespace MissionSimulation.FarSignal
     public sealed class EarthLaunchSimulator
     {
         static void Add(LaunchReport r, IssueLevel level, string code, string text, string fix) { r.issues.Add(new Issue(level, code, text, fix)); }
+        static bool ValidNumber(float n) { return !float.IsNaN(n) && !float.IsInfinity(n) && n >= 0; }
+        static bool ValidIds<T>(T[] items, Func<T, string> id) where T : class
+        {
+            if (items == null || items.Length == 0) return false;
+            var ids = new HashSet<string>();
+            foreach (var item in items) if (item == null || string.IsNullOrWhiteSpace(id(item)) || !ids.Add(id(item))) return false;
+            return true;
+        }
+        static bool ValidScenario(EarthScenario s)
+        {
+            if (s == null || string.IsNullOrWhiteSpace(s.missionId) || string.IsNullOrWhiteSpace(s.nextMissionId) || s.budgetUsd <= 0 || s.busCostUsd < 0 || !ValidNumber(s.busMassKg) || !ValidNumber(s.busPowerKw) || !ValidNumber(s.minimumBatteryKwh) || !ValidNumber(s.minimumFuelUnits)) return false;
+            if (!ValidIds(s.launchers, x => x.id) || !ValidIds(s.nozzles, x => x.id) || !ValidIds(s.fairings, x => x.id) || !ValidIds(s.engines, x => x.id) || !ValidIds(s.cargoModules, x => x.id) || !ValidIds(s.powerSystems, x => x.id) || !ValidIds(s.cargo, x => x.id) || !ValidIds(s.landingMap, x => x.id)) return false;
+            return s.launchers.All(x => x.costUsd >= 0 && ValidNumber(x.basePayloadKg) && x.nozzleMounts != null && x.nozzleMounts.Length > 0 && x.nozzleMounts.All(m => !string.IsNullOrWhiteSpace(m)))
+                && s.nozzles.All(x => x.costUsd >= 0 && !string.IsNullOrWhiteSpace(x.mount) && ValidNumber(x.payloadGainKg))
+                && s.fairings.All(x => x.costUsd >= 0 && x.maxModuleSize > 0 && ValidNumber(x.payloadLossKg))
+                && s.engines.All(x => x.costUsd >= 0 && ValidNumber(x.massKg) && ValidNumber(x.fuelUnits) && x.freeLandingCorrections >= 0)
+                && s.cargoModules.All(x => x.costUsd >= 0 && ValidNumber(x.massKg) && x.size > 0 && x.slots > 0)
+                && s.powerSystems.All(x => x.costUsd >= 0 && ValidNumber(x.massKg) && ValidNumber(x.maxPowerKw) && ValidNumber(x.batteryKwh))
+                && s.cargo.All(x => x.costUsd >= 0 && ValidNumber(x.massKg) && ValidNumber(x.extraPowerKw) && ValidNumber(x.extraFuelUnits) && x.slots > 0)
+                && s.landingMap.All(x => ValidNumber(x.fuelUnits) && x.openMinute >= 0 && x.closeMinute >= x.openMinute);
+        }
         // This evaluates launch readiness, not the unimplemented flight or landing.
         public LaunchResult Evaluate(EarthScenario s, EarthDesign d)
         {
@@ -70,7 +91,7 @@ namespace MissionSimulation.FarSignal
             if (!report.CanLaunch)
             {
                 result.outcome = LaunchOutcome.Blocked;
-                result.summary = s.resultMessages != null && !string.IsNullOrEmpty(s.resultMessages.blocked) ? s.resultMessages.blocked : "Launch is on hold. Review the checklist.";
+                result.summary = s != null && s.resultMessages != null && !string.IsNullOrEmpty(s.resultMessages.blocked) ? s.resultMessages.blocked : "Launch is on hold. Review the checklist.";
                 return result;
             }
             result.outcome = report.issues.Any(i => i.level == IssueLevel.Warning) ? LaunchOutcome.ReadyWithWarnings : LaunchOutcome.Ready;
@@ -85,17 +106,18 @@ namespace MissionSimulation.FarSignal
         }
         public LaunchReport Validate(EarthScenario s, EarthDesign d)
         {
-            if (s == null || d == null) throw new ArgumentNullException(s == null ? "scenario" : "design");
-            var r = new LaunchReport { missionId = s.missionId, nextMissionId = s.nextMissionId, landingPadId = d.landingPadId };
-            if (s.launchers == null || s.nozzles == null || s.fairings == null || s.engines == null || s.cargoModules == null || s.powerSystems == null || s.cargo == null || s.landingMap == null)
-            { Add(r, IssueLevel.Error, "scenario", "Mission data is incomplete.", "Load the complete mission data."); return r; }
+            var r = new LaunchReport();
+            if (!ValidScenario(s)) { Add(r, IssueLevel.Error, "scenario", "Mission data is incomplete or invalid.", "Load a complete mission file with unique IDs and valid values."); return r; }
+            if (d == null) { Add(r, IssueLevel.Error, "selection", "The ship design is missing.", "Choose a ship configuration."); return r; }
+            r.missionId = s.missionId; r.nextMissionId = s.nextMissionId; r.landingPadId = d.landingPadId;
             var l = s.launchers.FirstOrDefault(x => x.id == d.launcherId); var n = s.nozzles.FirstOrDefault(x => x.id == d.nozzleId);
             var f = s.fairings.FirstOrDefault(x => x.id == d.fairingId); var e = s.engines.FirstOrDefault(x => x.id == d.engineId);
             var bay = s.cargoModules.FirstOrDefault(x => x.id == d.cargoModuleId); var p = s.powerSystems.FirstOrDefault(x => x.id == d.powerSystemId);
             var pad = s.landingMap.FirstOrDefault(x => x.id == d.landingPadId);
             if (l == null || n == null || f == null || e == null || bay == null || p == null || pad == null)
             { Add(r, IssueLevel.Error, "selection", "One or more required selections are missing or unknown.", "Select a valid launcher, nozzle, cover, engine, cargo bay, power system, and landing pad."); return r; }
-            r.costUsd = s.busCostUsd + l.costUsd + n.costUsd + f.costUsd + e.costUsd + bay.costUsd + p.costUsd;
+            try { r.costUsd = checked(s.busCostUsd + l.costUsd + n.costUsd + f.costUsd + e.costUsd + bay.costUsd + p.costUsd); }
+            catch (OverflowException) { Add(r, IssueLevel.Error, "scenario", "Mission cost exceeds the supported range.", "Correct the mission cost values."); return r; }
             r.payloadKg = s.busMassKg + e.massKg + bay.massKg + p.massKg;
             r.launchCapacityKg = l.basePayloadKg + n.payloadGainKg - f.payloadLossKg;
             r.availablePowerKw = p.maxPowerKw; r.requiredPowerKw = s.busPowerKw; r.batteryKwh = p.batteryKwh;
@@ -110,12 +132,16 @@ namespace MissionSimulation.FarSignal
                 if (item == null || !selected.Add(placement.cargoId)) { Add(r, IssueLevel.Error, "cargo", "An unknown or duplicate cargo item was selected.", "Remove the duplicate or select a valid item."); continue; }
                 if (item.slots <= 0 || placement.startSlot < 0 || placement.startSlot > bay.slots || item.slots > bay.slots - placement.startSlot)
                 { Add(r, IssueLevel.Error, "cargo_slots", item.name + " does not fit in the cargo bay.", "Move the item or select a larger cargo bay."); continue; }
-                r.costUsd += item.costUsd; r.payloadKg += item.massKg; r.requiredPowerKw += item.extraPowerKw; r.fuelUnits += item.extraFuelUnits; r.usedCargoSlots += item.slots;
+                try { r.costUsd = checked(r.costUsd + item.costUsd); }
+                catch (OverflowException) { Add(r, IssueLevel.Error, "scenario", "Cargo cost exceeds the supported range.", "Correct the cargo cost values."); return r; }
+                r.payloadKg += item.massKg; r.requiredPowerKw += item.extraPowerKw; r.fuelUnits += item.extraFuelUnits; r.usedCargoSlots += item.slots;
                 // A start slot represents a contiguous run; this guarantees the panel's adjacency requirement.
                 for (int slot = placement.startSlot; slot < placement.startSlot + item.slots; slot++)
                     if (slot < 0 || slot >= bay.slots || !occupied.Add(slot)) Add(r, IssueLevel.Error, "cargo_slots", item.name + " does not fit or overlaps another item.", "Move the item into free adjacent slots or choose a larger bay.");
             }
             foreach (var item in s.cargo.Where(x => x.required)) if (!selected.Contains(item.id)) Add(r, IssueLevel.Error, "required_cargo", item.name + " is required for Pole-7.", "Load and secure the required item.");
+            if (!ValidNumber(r.payloadKg) || !ValidNumber(r.requiredPowerKw) || !ValidNumber(r.fuelUnits) || float.IsNaN(r.launchCapacityKg) || float.IsInfinity(r.launchCapacityKg))
+            { Add(r, IssueLevel.Error, "scenario", "Combined mission values exceed the supported range.", "Correct the mission data values."); return r; }
             r.payloadMarginKg = r.launchCapacityKg - r.payloadKg; r.budgetMarginUsd = s.budgetUsd - r.costUsd;
             if (r.payloadMarginKg < 0) Add(r, IssueLevel.Error, "mass", "Payload exceeds launcher capacity by " + (-r.payloadMarginKg) + " kg.", "Reduce mass or select a higher-capacity compatible launcher configuration.");
             if (r.budgetMarginUsd < 0) Add(r, IssueLevel.Error, "budget", "Mission exceeds the budget by $" + (-r.budgetMarginUsd) + ".", "Choose lower-cost equipment.");
