@@ -1,0 +1,7 @@
+# Moon cart wheel: logic implementation
+
+`CartWheelMinigame` implements the ordered safety checks, three patches, one-second-per-patch hold, preserved cleaning progress and successful retest. `CartWheelState` is serializable and `Snapshot()` is a separate copy. The caller is responsible for saving and loading it. Partial hold progress is intentionally transient.
+
+The gameplay/UI team must bind the real cart power switch, wheel cover, patch targeting, interaction hold, loading controls and save system. Call `StartCart`, `SwitchOff`, `OpenCover`, `CloseCover`, and `HoldPatch` from the actual interactions. Pass only the elapsed time actively held on the same selected patch; call `EndHold` on release or target loss. Use `CleanCount`, `CurrentHoldProgress`, responses, and the saved state's `cleaned` flags for the status, fade, checks and audio. `StartCart` must not visually rotate the wheel unless it returns an accepted successful test. Loading a cargo item must only be invoked once it is available to the cart, and the scene's inventory owner must handle transfer and its own persistence.
+
+This is logic only. The wheel model, animation, sounds, visual feedback, cart cargo transfer, scene bindings and save backend are not included or playtested. No existing scenes or prefabs were modified. The input controller must implement the hold action. Unity Edit Mode tests are included but have not been run without the team's project/editor. The user and team still need to reconcile the updated recoverable landing rule with the earlier fail-and-restart rule.
