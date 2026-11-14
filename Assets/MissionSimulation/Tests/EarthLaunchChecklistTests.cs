@@ -94,5 +94,15 @@ namespace MissionSimulation.Tests
             EarthPowerTest restored; Assert.IsTrue(EarthPowerTest.TryRestore(scenario, design, test.Snapshot(), out restored));
             Assert.IsTrue(restored.Snapshot().laserTripped); Assert.IsTrue(restored.EssentialsPassed);
         }
+        [Test] public void LoadedLaserWarnsOnlyAfterAnOverloadTest()
+        {
+            design.launcherId="l2"; design.cargoModuleId="c2"; design.fairingId="f2";
+            design.cargo = new[] { new CargoPlacement { cargoId="panel",startSlot=0 }, new CargoPlacement { cargoId="kit",startSlot=2 }, new CargoPlacement { cargoId="laser",startSlot=3 } };
+            packing = new CargoPackingMinigame("c2",4); packing.Place("panel",0); packing.Place("kit",2); packing.Place("laser",3); packing.Lock("panel"); packing.Lock("kit"); packing.Lock("laser");
+            power = new EarthPowerTest("p1",5f,true); power.SetCabin(true); power.SetRadio(true);
+            var before = Check(3); Assert.IsFalse(before.issues.Any(x=>x.code=="optional_power")); Assert.AreEqual(3f,before.requiredPowerKw);
+            Assert.IsFalse(power.TryLaser()); var after = Check(3);
+            Assert.IsTrue(after.CanLaunch); Assert.IsTrue(after.issues.Any(x=>x.code=="optional_power")); Assert.IsFalse(after.laserPowered); Assert.AreEqual(3f,after.requiredPowerKw);
+        }
     }
 }

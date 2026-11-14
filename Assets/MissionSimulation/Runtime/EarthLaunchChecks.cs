@@ -79,6 +79,12 @@ namespace MissionSimulation.FarSignal
             if (invalidLaserState)
                 Issue(result, IssueLevel.Error, "power_test_state", "The saved laser test does not match the selected equipment or power system.", "Repeat the power test with the current cargo and power system.");
             result.laserPowered = power != null && !invalidLaserState && power.powerSystemId == design.powerSystemId && power.laserOn;
+            // The resource preview includes all optional loads. The actual checklist must
+            // reflect the player's test, and warn about an overload only if it was attempted.
+            result.issues.RemoveAll(x => x.code == "optional_power");
+            if (power != null && !invalidLaserState && power.powerSystemId == design.powerSystemId && power.laserTripped)
+                Issue(result, IssueLevel.Warning, "optional_power", "The cabin, radio, and laser need 6 kW. Your system supplies " + result.availablePowerKw + " kW.", "Use a stronger power system or open the cover by hand on the Moon.");
+            result.requiredPowerKw = (power != null && power.cabinOn ? 2f : 0f) + (power != null && power.radioOn ? 1f : 0f) + (result.laserPowered ? 3f : 0f);
             if (bay == null || cargo == null || cargo.items == null || cargo.bayId != design.cargoModuleId || cargo.slotCount != bay.slots || design.cargo == null)
                 Issue(result, IssueLevel.Error, "cargo_packing", "Cargo packing is missing or belongs to a different bay.", "Repack and lock the cargo in the selected bay.");
             else
