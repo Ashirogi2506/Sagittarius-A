@@ -1,42 +1,55 @@
-# Gameplay UI architecture
+# Gameplay architecture — Earth increment
 
-## Screen map
+Unity 6.6 / 6000.6.9f1. Source: the Earth section and embedded catalog in FarSignal.Campaign-Team-Prompt.md (14 November 2026). Catalog IDs and values are draft game data.
 
-`Main Menu -> Commander Setup -> Expedition Route -> Briefing -> Configuration -> Review -> Launch -> Flight Log`
+## Implemented flow
 
-- A successful result can unlock the next mission.
-- Retry returns to Configuration without requiring the player to repeat the briefing.
-- The same screens must load different chapter data for Earth, Moon, Mars, and Ganymede/Jupiter.
+Commander profile -> route -> Khulan briefing -> interactive Earth garage -> launch checklist -> launch authorization -> Earth log -> teammate transit -> Moon arrival handoff.
 
-## Responsibility boundaries
+Continue Expedition resumes the saved garage, Earth log after launch, or Moon handoff after transit. Launch authorization records a validated manifest; physical launch, orbit and flight simulation are not implemented here. Moon arrival is an integration screen, not a playable lunar scene.
 
-- UI reads mission content and displays resource, validation, simulation, and result objects.
-- UI sends `MissionConfiguration` to `IMissionSimulationService`.
-- The simulation system owns formulas, compatibility rules, scoring, and outcome decisions.
-- The 3D system receives visualization commands after selections are validated.
-- Narrative text belongs in data assets, not large hard-coded C# strings.
+The garage has six hardware categories (four choices each), six cargo items, live totals, repair guidance, and starter / laser / overweight presets. Red checks block launch; yellow checks remain visible. Cargo, power and landing checks require a registered minigame runner. Missing modules display MODULE PENDING and cannot grant completion.
 
-The placeholder scene intentionally contains no simulation formulas. This prevents the displayed values from drifting away from the simulation programmer's calculations.
+## Ownership
 
-## Initial contracts
+- EarthGarageView displays and edits selections; it does not calculate ship limits.
+- EarthGameplaySession coordinates draft state, check invalidation, minigame callbacks and launch gating.
+- IEarthSimulationAdapter is the replacement point for the simulation engineer. DraftEarthSimulationAdapter reproduces this brief's rules for local development. It is not flight physics.
+- IEarthMinigameRunner is the teammate boundary; see EarthMinigameIntegration.md.
+- GetMoonHandoff() returns the saved loadout, landing plan, resources, commander and transit choice. MoonStageRequested fires after successful transit. A scene loader must also query GetMoonHandoff() on resume; events are not replayed.
+- The simulation/integration engineer owns the eventual campaign save service, resource spending and cross-chapter transactions. This increment spends no landing fuel or battery.
+- Existing generic MissionDefinition / IMissionSimulationService types are earlier scaffolding. Earth currently uses the typed catalog and adapter above; do not implement both for the same screen.
 
-- `MissionDefinition`: objective, briefing, limits, available components, orbits, and launchers.
-- `MissionConfiguration`: the player's selected component IDs, orbit ID, and launcher ID.
-- `MissionResourceTotals`: calculated resource quantities with explicit units.
-- `MissionValidationResult`: whether launch is allowed, calculated totals, and human-readable messages.
-- `MissionResult`: outcome, score breakdown, explanations, and progression unlock flag.
-- `IMissionSimulationService`: the integration boundary the simulation programmer implements.
-- `GlossaryDatabase`: reusable player-facing definitions for technical terms.
+## Draft persistence
 
-## Resource conventions
+Local prototype state uses PlayerPrefs key FarSignal.EarthGarageDraft.v1, separate from the existing profile keys. Save after changes, accepted checks, launch and transit. Load rejects incompatible version, unknown/duplicate IDs and missing structural fields. It is not a production campaign save. IEarthDraftStore is injectable at session initialization for the team's persistence service and isolated tests.
 
-- Cost: game credits. The science and balancing team decides how credits relate to real currency.
-- Mass: kilograms (kg).
-- Power supply and demand: watts (W). Keep them separate.
-- Data generation and communications capacity: megabits per second (Mbps).
-- Data storage: gigabits (Gb).
-- Mission duration: days.
-- Scientific value: gameplay points, not a physical unit.
-- Risk: percentage from 0 to 100.
+Changing cargo or bay clears cargo placements and locks. Changing power or laser cargo resets the power test. All changes reassess the current landing plan and hardware limits. Selecting a preset resets its checks.
 
-Do not silently convert units inside a UI view. Unit conversion belongs in a shared formatting helper or in the simulation layer.
+A minigame receives a snapshot and a unique run ID plus build revision. Only matching callbacks are accepted. Cancel, stale and duplicate callbacks cannot advance a stage. Only the relevant check fields are copied back. In-progress activity checkpoints are not persisted yet; quitting during an activity retries that activity from the last accepted check.
+
+## Units and formulas
+
+| Quantity | Unit / draft rule |
+|---|---|
+| Cost | USD: bus + six selected hardware parts + cargo |
+| Mass | kg: bus + flight engine + bay + power system + cargo |
+| Payload capacity | kg: launcher base + compatible nozzle gain - cover loss |
+| Mass margin | capacity - mass; negative blocks, 0–100 kg warns |
+| Power | kW: cabin 2 + radio 1; optional laser adds 3 |
+| Battery energy | kWh; minimum rated storage 4 |
+| Fuel | Fictional units; launch minimum 10, pad-specific descent requirement |
+| Landing time | Draft minute 0–10; light window includes opening, excludes closing |
+
+Launcher/nozzle/cover mass is represented by their capacity effects. Do not add it again. kW is power; kWh is stored energy. No real mission prediction is implied.
+
+## Validation
+
+Tests/EarthGarage is a package-free .NET console runner linking the production rule model. Run:
+`dotnet run --project Tests/EarthGarage/EarthGarage.Tests.csproj`
+
+It checks the exact catalog totals, red and yellow gates, cargo locks/overlap/adjacency, invalid IDs, mount and cover compatibility, optional laser testing, landing-window boundaries and pad fuel warnings. Unity Play Mode checks cover selecting parts, preset repair, review gating and saved reload.
+
+Far Signal > Run Earth Session Checks exercises the real Unity session with an editor-only fake runner and in-memory save: cancellation, stale/duplicate callbacks, invalidation, launch once, transit once and reload. It never registers on the player's session or changes the player's save.
+
+Full team integration still needs the actual minigame scenes, Moon scene resume and authoritative save transaction tests. Do not mark those integrated until the teammate modules are present.

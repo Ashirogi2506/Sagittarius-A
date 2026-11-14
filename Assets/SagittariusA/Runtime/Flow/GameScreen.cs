@@ -9,6 +9,7 @@ namespace SagittariusA.Gameplay.Flow
         Configuration,
         Review,
         Simulation,
-        Results
+        Results,
+        MoonArrival
     }
 }

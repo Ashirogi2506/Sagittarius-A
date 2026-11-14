@@ -19,6 +19,8 @@ namespace SagittariusA.Gameplay.Flow
 
         private void Awake()
         {
+            var session = GetComponent<EarthGameplaySession>() ?? gameObject.AddComponent<EarthGameplaySession>();
+            session.Initialize();
             RebuildViewMap();
 
             if (views.Count == 0)
@@ -45,17 +47,17 @@ namespace SagittariusA.Gameplay.Flow
 
         public bool Show(GameScreen screen)
         {
+            if (GetComponent<EarthGameplaySession>().Busy) return false;
             if (!views.TryGetValue(screen, out GameScreenView nextView))
             {
                 Debug.LogError($"No UI view is registered for {screen}.", this);
                 return false;
             }
 
-            if (screen == GameScreen.Results)
-            {
-                PlayerPrefs.SetInt("FarSignal.EarthComplete", 1);
-                PlayerPrefs.Save();
-            }
+            var session = GetComponent<EarthGameplaySession>();
+            if (screen == GameScreen.Simulation && !session.TryLaunch()) return false;
+            if (screen == GameScreen.Results && !session.Launched) return false;
+            if (screen == GameScreen.MoonArrival && !session.TransitCompleted) return false;
 
             GameScreen previous = CurrentScreen;
 
@@ -65,6 +67,12 @@ namespace SagittariusA.Gameplay.Flow
             }
 
             CurrentScreen = screen;
+            if (EventSystem.current != null)
+            {
+                EventSystem.current.SetSelectedGameObject(null);
+                foreach (var button in nextView.GetComponentsInChildren<Button>())
+                    if (button.interactable) { EventSystem.current.SetSelectedGameObject(button.gameObject); break; }
+            }
             ScreenChanged?.Invoke(previous, screen);
             return true;
         }
@@ -309,7 +317,7 @@ namespace SagittariusA.Gameplay.Flow
                 return;
             }
 
-            bool earthComplete = PlayerPrefs.GetInt("FarSignal.EarthComplete", 0) == 1;
+            bool earthComplete = GetComponentInParent<EarthGameplaySession>().Launched;
             moonCard.color = earthComplete ? readyCardColor : lockedCardColor;
             moonStatus.text = earthComplete ? "HANDOFF READY" : "LOCKED";
             moonStatus.color = earthComplete ? readyColor : lockedColor;
@@ -376,6 +384,7 @@ namespace SagittariusA.Gameplay.Flow
             CreateScreen(canvasObject.transform, GameScreen.Review, "EARTH LAUNCH REPORT", "Verify the ship, both repair supplies, and the Beacon Pad plan before committing to launch.", "Commit Launch", GameScreen.Simulation, "Back", GameScreen.Configuration);
             CreateScreen(canvasObject.transform, GameScreen.Simulation, "LAUNCH AND ORBIT", "Complete the final checks, launch, and establish contact with Pole-7 from Earth orbit.", "Confirm Orbit", GameScreen.Results, null, GameScreen.Simulation);
             CreateScreen(canvasObject.transform, GameScreen.Results, "EARTH FLIGHT LOG", "The repair cargo is secure. The expedition can begin the Earth-to-Moon transit.", "Return to Route", GameScreen.MissionSelection, "Reconfigure", GameScreen.Configuration);
+            EarthGarageView.Create(canvasObject.transform, GameScreen.MoonArrival);
 
             if (UnityEngine.Object.FindAnyObjectByType<EventSystem>() == null)
             {
@@ -399,6 +408,12 @@ namespace SagittariusA.Gameplay.Flow
             if (screen == GameScreen.MainMenu)
             {
                 CreateMainMenuScreen(parent, primaryTarget);
+                return;
+            }
+
+            if (screen == GameScreen.Configuration || screen == GameScreen.Review || screen == GameScreen.Simulation || screen == GameScreen.Results)
+            {
+                EarthGarageView.Create(parent, screen);
                 return;
             }
 
@@ -455,7 +470,7 @@ namespace SagittariusA.Gameplay.Flow
             Image accentBar = CreateImage("ActiveMenuAccent", panel.transform, new Color(1f, 0.43f, 0.04f, 1f));
             Stretch(accentBar.rectTransform, new Vector2(0.047f, 0.596f), new Vector2(0.05f, 0.654f), Vector2.zero, Vector2.zero);
 
-            Button startButton = CreateButton("StartNewExpedition", panel.transform, "START NEW EXPEDITION", new Color(0f, 0f, 0f, 0f));
+            Button startButton = CreateButton("CommanderProfile", panel.transform, "COMMANDER PROFILE", new Color(0f, 0f, 0f, 0f));
             Stretch(startButton.GetComponent<RectTransform>(), new Vector2(0.055f, 0.58f), new Vector2(0.36f, 0.67f), Vector2.zero, Vector2.zero);
             Text startLabel = startButton.GetComponentInChildren<Text>();
             startLabel.fontSize = 25;
@@ -463,7 +478,14 @@ namespace SagittariusA.Gameplay.Flow
             startLabel.fontStyle = FontStyle.Bold;
             CreateLabel(panel.transform, "→", 32, FontStyle.Normal, new Color(1f, 0.43f, 0.04f, 1f), new Vector2(0.325f, 0.585f), new Vector2(0.37f, 0.665f));
 
-            CreateMenuItem(panel.transform, "CAMPAIGN LOG", 0.5f);
+            Button resume = CreateButton("ContinueExpedition", panel.transform, "CONTINUE EXPEDITION", Color.clear);
+            Stretch(resume.GetComponent<RectTransform>(), new Vector2(0.055f, 0.49f), new Vector2(0.36f, 0.56f), Vector2.zero, Vector2.zero);
+            resume.GetComponentInChildren<Text>().alignment = TextAnchor.MiddleLeft;
+            resume.onClick.AddListener(() => {
+                var flow = parent.GetComponentInParent<GameFlowController>();
+                var session = flow.GetComponent<EarthGameplaySession>();
+                flow.Show(session.TransitCompleted ? GameScreen.MoonArrival : session.Launched ? GameScreen.Results : GameScreen.Configuration);
+            });
             CreateMenuItem(panel.transform, "MISSION ARCHIVE", 0.43f);
             CreateMenuItem(panel.transform, "SETTINGS", 0.36f);
             CreateMenuItem(panel.transform, "CREDITS", 0.29f);
@@ -471,7 +493,7 @@ namespace SagittariusA.Gameplay.Flow
 
             Image statusBar = CreateImage("ProgramStatusAccent", panel.transform, new Color(1f, 0.43f, 0.04f, 1f));
             Stretch(statusBar.rectTransform, new Vector2(0.047f, 0.075f), new Vector2(0.049f, 0.11f), Vector2.zero, Vector2.zero);
-            CreateLabel(panel.transform, "EXPEDITION STATUS: EARTH LAUNCH READY", 15, FontStyle.Normal, TextColor, new Vector2(0.06f, 0.06f), new Vector2(0.43f, 0.125f));
+            CreateLabel(panel.transform, "EXPEDITION STATUS: EARTH GARAGE AVAILABLE", 15, FontStyle.Normal, TextColor, new Vector2(0.06f, 0.06f), new Vector2(0.53f, 0.125f));
 
             GameScreenView view = panel.gameObject.AddComponent<GameScreenView>();
             view.Configure(GameScreen.MainMenu, startButton, primaryTarget, null, GameScreen.MainMenu);
@@ -527,18 +549,6 @@ namespace SagittariusA.Gameplay.Flow
                 case GameScreen.Briefing:
                     BuildBriefing(parent);
                     break;
-                case GameScreen.Configuration:
-                    BuildConfiguration(parent);
-                    break;
-                case GameScreen.Review:
-                    BuildReview(parent);
-                    break;
-                case GameScreen.Simulation:
-                    BuildSimulation(parent);
-                    break;
-                case GameScreen.Results:
-                    BuildResults(parent);
-                    break;
             }
         }
 
@@ -547,7 +557,7 @@ namespace SagittariusA.Gameplay.Flow
             CreateSectionTitle(parent, "EXPEDITION ROUTE", new Vector2(0.03f, 0.82f), new Vector2(0.97f, 0.96f));
             CreateMissionCard(parent, new Vector2(0.03f, 0.12f), new Vector2(0.25f, 0.78f), "01", "EARTH", "The Moon Call", "AVAILABLE", Accent);
             CreateMissionCard(parent, new Vector2(0.27f, 0.12f), new Vector2(0.49f, 0.78f), "02", "MOON", "Dustbound Delivery", "LOCKED", MutedText);
-            CreateMissionCard(parent, new Vector2(0.51f, 0.12f), new Vector2(0.73f, 0.78f), "03", "MARS", "The Locked Bay", "LOCKED", MutedText);
+            CreateMissionCard(parent, new Vector2(0.51f, 0.12f), new Vector2(0.73f, 0.78f), "03", "MARS", "Orbiter Assembly", "LOCKED", MutedText);
             CreateMissionCard(parent, new Vector2(0.75f, 0.12f), new Vector2(0.97f, 0.78f), "04", "GANYMEDE", "The First Signal", "LOCKED", MutedText);
         }
 
@@ -596,7 +606,7 @@ namespace SagittariusA.Gameplay.Flow
             Text moonStatus = moonCard.transform.Find("LOCKED").GetComponent<Text>();
             CampaignRouteStatusView routeStatus = parent.gameObject.AddComponent<CampaignRouteStatusView>();
             routeStatus.Configure(moonCard, moonStatus, Accent, MutedText, CardSelected, Card);
-            CreateMissionCard(parent, new Vector2(0.55f, 0.1f), new Vector2(0.77f, 0.9f), "03", "MARS", "The Locked Bay", "LOCKED", MutedText);
+            CreateMissionCard(parent, new Vector2(0.55f, 0.1f), new Vector2(0.77f, 0.9f), "03", "MARS", "Orbiter Assembly", "LOCKED", MutedText);
             CreateMissionCard(parent, new Vector2(0.79f, 0.1f), new Vector2(0.97f, 0.9f), "04", "GANYMEDE", "The First Signal", "LOCKED", MutedText);
         }
 
@@ -604,10 +614,10 @@ namespace SagittariusA.Gameplay.Flow
         {
             Image call = CreateCard(parent, "Pole7Call", new Vector2(0.03f, 0.5f), new Vector2(0.64f, 0.92f), CardSelected);
             CreateLabel(call.transform, "INCOMING · POLE-7", 15, FontStyle.Bold, Accent, new Vector2(0.04f, 0.76f), new Vector2(0.96f, 0.92f));
-            const string briefingCall = "“Commander {playerName}, this is Pole-7. Our main panel burned out. The crew is safe on battery power, but the ridge beacons have gone dark.”";
+            const string briefingCall = "“Commander {playerName}, this is Khulan at Pole-7. Our main power panel burned out. The crew is safe, but our beacons and main relay are down.”";
             Text briefingText = CreateLabel(call.transform, briefingCall, 19, FontStyle.Bold, TextColor, new Vector2(0.04f, 0.28f), new Vector2(0.96f, 0.76f));
             briefingText.gameObject.AddComponent<CommanderNameTextView>().Configure(briefingText, briefingCall);
-            CreateLabel(call.transform, "MIRA · POLE-7 OPERATOR", 14, FontStyle.Bold, MutedText, new Vector2(0.04f, 0.1f), new Vector2(0.96f, 0.28f));
+            CreateLabel(call.transform, "KHULAN · POLE-7 OPERATOR", 14, FontStyle.Bold, MutedText, new Vector2(0.04f, 0.1f), new Vector2(0.96f, 0.28f));
 
             Image cargo = CreateCard(parent, "RequiredCargo", new Vector2(0.67f, 0.5f), new Vector2(0.97f, 0.92f), Card);
             CreateLabel(cargo.transform, "REQUIRED CARGO", 15, FontStyle.Bold, TextColor, new Vector2(0.07f, 0.76f), new Vector2(0.93f, 0.92f));
@@ -620,81 +630,6 @@ namespace SagittariusA.Gameplay.Flow
             CreateConstraintCard(parent, new Vector2(0.75f, 0.08f), new Vector2(0.97f, 0.44f), "DESTINATION", "Pole-7", "Lunar south pole");
         }
 
-        private static void BuildConfiguration(Transform parent)
-        {
-            Image categories = CreateCard(parent, "Categories", new Vector2(0.02f, 0.08f), new Vector2(0.17f, 0.92f), Card);
-            CreateLabel(categories.transform, "SHIP", 15, FontStyle.Bold, Accent, new Vector2(0.1f, 0.82f), new Vector2(0.9f, 0.95f));
-            CreateCategory(categories.transform, "Launcher", 0.68f, true);
-            CreateCategory(categories.transform, "Nozzle", 0.55f, false);
-            CreateCategory(categories.transform, "Cover", 0.42f, false);
-            CreateCategory(categories.transform, "Engine", 0.29f, false);
-            CreateCategory(categories.transform, "Cargo", 0.16f, false);
-
-            Image choices = CreateCard(parent, "LaunchHardware", new Vector2(0.19f, 0.08f), new Vector2(0.69f, 0.92f), Card);
-            CreateLabel(choices.transform, "CURRENT LAUNCH PACKAGE", 17, FontStyle.Bold, TextColor, new Vector2(0.04f, 0.84f), new Vector2(0.96f, 0.96f));
-            CreateComponentCard(choices.transform, new Vector2(0.04f, 0.48f), new Vector2(0.34f, 0.78f), "STANDARD LAUNCHER", "$16M", "10,900 kg base", true);
-            CreateComponentCard(choices.transform, new Vector2(0.36f, 0.48f), new Vector2(0.66f, 0.78f), "LONG A NOZZLE", "$4M", "+350 kg payload", true);
-            CreateComponentCard(choices.transform, new Vector2(0.68f, 0.48f), new Vector2(0.96f, 0.78f), "STANDARD COVER", "$4M", "4-module limit", true);
-            CreateComponentCard(choices.transform, new Vector2(0.04f, 0.1f), new Vector2(0.34f, 0.4f), "LONG-TRIP ENGINE", "$23M", "30 fuel units", true);
-            CreateComponentCard(choices.transform, new Vector2(0.36f, 0.1f), new Vector2(0.66f, 0.4f), "MEDIUM BAY", "$7M", "4 cargo slots", true);
-            CreateComponentCard(choices.transform, new Vector2(0.68f, 0.1f), new Vector2(0.96f, 0.4f), "LONG BATTERY", "$11M", "12 kWh reserve", true);
-
-            Image dashboard = CreateCard(parent, "Resource Dashboard", new Vector2(0.71f, 0.08f), new Vector2(0.98f, 0.92f), Card);
-            CreateLabel(dashboard.transform, "LIVE MARGINS", 17, FontStyle.Bold, TextColor, new Vector2(0.07f, 0.84f), new Vector2(0.93f, 0.96f));
-            CreateMetric(dashboard.transform, "BUDGET", "$110M / $115M", 0.67f, Warning);
-            CreateMetric(dashboard.transform, "PAYLOAD", "10,370 / 11,130 kg", 0.52f, Success);
-            CreateMetric(dashboard.transform, "POWER", "3 / 5 kW", 0.37f, Success);
-            CreateMetric(dashboard.transform, "BATTERY", "12 / 4 kWh", 0.22f, Success);
-            CreateMetric(dashboard.transform, "CARGO", "3 / 4 slots", 0.07f, Success);
-        }
-
-        private static void BuildReview(Transform parent)
-        {
-            Image summary = CreateCard(parent, "Design Summary", new Vector2(0.03f, 0.08f), new Vector2(0.58f, 0.92f), Card);
-            CreateLabel(summary.transform, "LAUNCH MANIFEST", 18, FontStyle.Bold, TextColor, new Vector2(0.05f, 0.82f), new Vector2(0.95f, 0.95f));
-            CreateReviewLine(summary.transform, "Required cargo", "P-4 panel + repair kit", 0.66f);
-            CreateReviewLine(summary.transform, "Launch system", "Standard / Long A", 0.5f);
-            CreateReviewLine(summary.transform, "Landing plan", "Beacon Pad · 10 fuel", 0.34f);
-            CreateReviewLine(summary.transform, "Budget margin", "$5M remaining", 0.18f);
-
-            Image checks = CreateCard(parent, "Validation", new Vector2(0.61f, 0.08f), new Vector2(0.97f, 0.92f), Card);
-            CreateLabel(checks.transform, "FLIGHT CHECKS", 18, FontStyle.Bold, TextColor, new Vector2(0.07f, 0.82f), new Vector2(0.93f, 0.95f));
-            CreateStatusLine(checks.transform, "READY", "Payload margin: 760 kg", 0.61f, Success);
-            CreateStatusLine(checks.transform, "LOCKED", "Both repair items secured", 0.41f, Success);
-            CreateStatusLine(checks.transform, "READY", "Battery reserve: 12 kWh", 0.21f, Success);
-        }
-
-        private static void BuildSimulation(Transform parent)
-        {
-            CreateSectionTitle(parent, "EARTH LAUNCH SEQUENCE", new Vector2(0.04f, 0.79f), new Vector2(0.96f, 0.94f));
-            CreatePhase(parent, "01", "CABIN", "Checked", 0.04f, Success);
-            CreatePhase(parent, "02", "CARGO", "Locked", 0.24f, Success);
-            CreatePhase(parent, "03", "IGNITION", "Complete", 0.44f, Success);
-            CreatePhase(parent, "04", "ORBIT", "Stable", 0.64f, Accent);
-            CreatePhase(parent, "05", "POLE-7", "Contact queued", 0.84f, MutedText);
-        }
-
-        private static void BuildResults(Transform parent)
-        {
-            Image score = CreateCard(parent, "Score", new Vector2(0.03f, 0.08f), new Vector2(0.3f, 0.92f), CardSelected);
-            CreateLabel(score.transform, "EARTH COMPLETE", 17, FontStyle.Bold, Success, new Vector2(0.08f, 0.78f), new Vector2(0.92f, 0.92f));
-            CreateLabel(score.transform, "ORBIT", 48, FontStyle.Bold, TextColor, new Vector2(0.08f, 0.38f), new Vector2(0.92f, 0.75f));
-            CreateLabel(score.transform, "STABLE · CARGO SECURE", 14, FontStyle.Bold, MutedText, new Vector2(0.08f, 0.18f), new Vector2(0.92f, 0.34f));
-
-            Image breakdown = CreateCard(parent, "Breakdown", new Vector2(0.33f, 0.08f), new Vector2(0.68f, 0.92f), Card);
-            CreateLabel(breakdown.transform, "FLIGHT LOG", 17, FontStyle.Bold, TextColor, new Vector2(0.07f, 0.8f), new Vector2(0.93f, 0.93f));
-            Text commanderValue = CreateLabel(breakdown.transform, "{playerName}", 17, FontStyle.Bold, TextColor, new Vector2(0.45f, 0.69f), new Vector2(0.94f, 0.78f), TextAnchor.MiddleRight);
-            CreateLabel(breakdown.transform, "Commander", 16, FontStyle.Normal, MutedText, new Vector2(0.06f, 0.69f), new Vector2(0.45f, 0.78f));
-            commanderValue.gameObject.AddComponent<CommanderNameTextView>().Configure(commanderValue, "{playerName}");
-            CreateReviewLine(breakdown.transform, "Repair supplies", "Both secured", 0.52f);
-            CreateReviewLine(breakdown.transform, "Budget used", "$110M / $115M", 0.34f);
-            CreateReviewLine(breakdown.transform, "Landing plan", "Beacon Pad", 0.16f);
-
-            Image lesson = CreateCard(parent, "Lesson", new Vector2(0.71f, 0.08f), new Vector2(0.97f, 0.92f), Card);
-            CreateLabel(lesson.transform, "NEXT TRANSMISSION", 17, FontStyle.Bold, TextColor, new Vector2(0.08f, 0.8f), new Vector2(0.92f, 0.93f));
-            CreateLabel(lesson.transform, "“Mira, we've got your panel. See you on the Moon.”", 19, FontStyle.Normal, TextColor, new Vector2(0.08f, 0.36f), new Vector2(0.92f, 0.76f));
-            CreateLabel(lesson.transform, "MOON TRANSIT READY", 15, FontStyle.Bold, Success, new Vector2(0.08f, 0.15f), new Vector2(0.92f, 0.3f));
-        }
 
         private static Image CreateCard(Transform parent, string name, Vector2 min, Vector2 max, Color color)
         {
@@ -721,32 +656,9 @@ namespace SagittariusA.Gameplay.Flow
             CreateLabel(card.transform, note, 15, FontStyle.Normal, MutedText, new Vector2(0.07f, 0.08f), new Vector2(0.93f, 0.32f));
         }
 
-        private static void CreateCategory(Transform parent, string label, float y, bool selected)
-        {
-            Image item = CreateCard(parent, label, new Vector2(0.08f, y), new Vector2(0.92f, y + 0.12f), selected ? CardSelected : new Color(0.08f, 0.12f, 0.18f, 1f));
-            CreateLabel(item.transform, label, 15, selected ? FontStyle.Bold : FontStyle.Normal, selected ? TextColor : MutedText, new Vector2(0.08f, 0f), new Vector2(0.92f, 1f));
-        }
 
-        private static void CreateComponentCard(Transform parent, Vector2 min, Vector2 max, string title, string stats, string science, bool selected)
-        {
-            Image card = CreateCard(parent, title, min, max, selected ? CardSelected : new Color(0.075f, 0.115f, 0.18f, 1f));
-            CreateLabel(card.transform, selected ? "SELECTED" : "AVAILABLE", 13, FontStyle.Bold, selected ? Success : MutedText, new Vector2(0.08f, 0.79f), new Vector2(0.92f, 0.93f));
-            CreateLabel(card.transform, title, 19, FontStyle.Bold, TextColor, new Vector2(0.08f, 0.5f), new Vector2(0.92f, 0.79f));
-            CreateLabel(card.transform, stats, 14, FontStyle.Normal, MutedText, new Vector2(0.08f, 0.28f), new Vector2(0.92f, 0.5f));
-            CreateLabel(card.transform, science, 15, FontStyle.Bold, Accent, new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.27f));
-        }
 
-        private static void CreateMetric(Transform parent, string label, string value, float y, Color color)
-        {
-            CreateLabel(parent, label, 13, FontStyle.Bold, MutedText, new Vector2(0.08f, y), new Vector2(0.46f, y + 0.11f));
-            CreateLabel(parent, value, 15, FontStyle.Bold, color, new Vector2(0.46f, y), new Vector2(0.92f, y + 0.11f), TextAnchor.MiddleRight);
-        }
 
-        private static void CreateReviewLine(Transform parent, string label, string value, float y)
-        {
-            CreateLabel(parent, label, 16, FontStyle.Normal, MutedText, new Vector2(0.06f, y), new Vector2(0.45f, y + 0.13f));
-            CreateLabel(parent, value, 17, FontStyle.Bold, TextColor, new Vector2(0.45f, y), new Vector2(0.94f, y + 0.13f), TextAnchor.MiddleRight);
-        }
 
         private static void CreateStatusLine(Transform parent, string status, string message, float y, Color color)
         {
@@ -755,13 +667,6 @@ namespace SagittariusA.Gameplay.Flow
             CreateLabel(row.transform, message, 15, FontStyle.Normal, TextColor, new Vector2(0.3f, 0.1f), new Vector2(0.95f, 0.9f));
         }
 
-        private static void CreatePhase(Transform parent, string number, string title, string status, float x, Color color)
-        {
-            Image phase = CreateCard(parent, title, new Vector2(x, 0.16f), new Vector2(x + 0.16f, 0.7f), new Color(color.r, color.g, color.b, 0.16f));
-            CreateLabel(phase.transform, number, 16, FontStyle.Bold, color, new Vector2(0.08f, 0.72f), new Vector2(0.92f, 0.91f));
-            CreateLabel(phase.transform, title, 18, FontStyle.Bold, TextColor, new Vector2(0.08f, 0.38f), new Vector2(0.92f, 0.72f));
-            CreateLabel(phase.transform, status, 14, FontStyle.Normal, color, new Vector2(0.08f, 0.12f), new Vector2(0.92f, 0.35f));
-        }
 
         private static void CreateSectionTitle(Transform parent, string value, Vector2 min, Vector2 max)
         {
@@ -790,6 +695,7 @@ namespace SagittariusA.Gameplay.Flow
             gameObject.transform.SetParent(parent, false);
             Text text = gameObject.GetComponent<Text>();
             text.text = value;
+            text.supportRichText = false;
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = size;
             text.fontStyle = style;

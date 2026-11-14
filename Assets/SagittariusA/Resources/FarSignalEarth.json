@@ -1,0 +1,425 @@
+{
+  "title": "Far Signal — The Moon Call",
+  "missionId": "far-signal-earth",
+  "nextMissionId": "pole-7",
+  "status": "Design draft for team review",
+  "briefing": "Build a crewed ship and launch with the parts that Pole-7 needs.",
+  "year": 2168,
+  "budgetUsd": 115000000,
+  "busCostUsd": 36000000,
+  "busMassKg": 6200,
+  "busPowerKw": 3,
+  "minimumBatteryKwh": 4,
+  "minimumFuelUnits": 10,
+  "opening": [
+    {
+      "speaker": "Khulan - Pole-7",
+      "line": "Commander {playerName}, this is Khulan at Pole-7. Can you hear me? I'm calling from the backup radio."
+    },
+    {
+      "speaker": "{playerName}",
+      "line": "We hear you, Khulan. What's happened?"
+    },
+    {
+      "speaker": "Khulan - Pole-7",
+      "line": "Our main power panel burned out. The crew is safe, but our beacons and main relay are down. I can talk to you from here. I can't guide you from the pad."
+    },
+    {
+      "speaker": "{playerName}",
+      "line": "We're still loading. Tell me what to bring."
+    },
+    {
+      "speaker": "Khulan - Pole-7",
+      "line": "A P-4 panel and an insulated repair kit. I'm sending our last route map. There's a cart at the pad. Use it for the panel and check the road before you take it through."
+    },
+    {
+      "speaker": "Sam - Flight Engineer",
+      "line": "Three cargo spaces for the panel and kit. I had plans for those spaces. The snack budget will recover."
+    },
+    {
+      "speaker": "{playerName}",
+      "line": "Put both on the checklist. We'll call again once we're in orbit."
+    }
+  ],
+  "launchers": [
+    {
+      "id": "l1",
+      "name": "Light launcher",
+      "costUsd": 12000000,
+      "basePayloadKg": 10100,
+      "nozzleMounts": [
+        "A"
+      ]
+    },
+    {
+      "id": "l2",
+      "name": "Standard launcher",
+      "costUsd": 16000000,
+      "basePayloadKg": 10900,
+      "nozzleMounts": [
+        "A"
+      ]
+    },
+    {
+      "id": "l3",
+      "name": "Heavy launcher",
+      "costUsd": 22000000,
+      "basePayloadKg": 12000,
+      "nozzleMounts": [
+        "B"
+      ]
+    },
+    {
+      "id": "l4",
+      "name": "Dual-mount launcher",
+      "costUsd": 19000000,
+      "basePayloadKg": 11100,
+      "nozzleMounts": [
+        "A",
+        "B"
+      ]
+    }
+  ],
+  "nozzles": [
+    {
+      "id": "n1",
+      "name": "Short A nozzle",
+      "costUsd": 2000000,
+      "mount": "A",
+      "payloadGainKg": 0
+    },
+    {
+      "id": "n2",
+      "name": "Long A nozzle",
+      "costUsd": 4000000,
+      "mount": "A",
+      "payloadGainKg": 350
+    },
+    {
+      "id": "n3",
+      "name": "Wide B nozzle",
+      "costUsd": 5000000,
+      "mount": "B",
+      "payloadGainKg": 450
+    },
+    {
+      "id": "n4",
+      "name": "Light B nozzle",
+      "costUsd": 3000000,
+      "mount": "B",
+      "payloadGainKg": 100
+    }
+  ],
+  "fairings": [
+    {
+      "id": "f1",
+      "name": "Narrow cover",
+      "costUsd": 3000000,
+      "maxModuleSize": 3,
+      "payloadLossKg": 0
+    },
+    {
+      "id": "f2",
+      "name": "Standard cover",
+      "costUsd": 4000000,
+      "maxModuleSize": 4,
+      "payloadLossKg": 120
+    },
+    {
+      "id": "f3",
+      "name": "Wide cover",
+      "costUsd": 6000000,
+      "maxModuleSize": 6,
+      "payloadLossKg": 300
+    },
+    {
+      "id": "f4",
+      "name": "Light wide cover",
+      "costUsd": 9000000,
+      "maxModuleSize": 6,
+      "payloadLossKg": 100
+    }
+  ],
+  "engines": [
+    {
+      "id": "e1",
+      "name": "Standard engine",
+      "costUsd": 18000000,
+      "massKg": 2200,
+      "fuelUnits": 15
+    },
+    {
+      "id": "e2",
+      "name": "Long-trip engine",
+      "costUsd": 23000000,
+      "massKg": 2650,
+      "fuelUnits": 30
+    },
+    {
+      "id": "e3",
+      "name": "Light engine",
+      "costUsd": 16000000,
+      "massKg": 2000,
+      "fuelUnits": 12
+    },
+    {
+      "id": "e4",
+      "name": "Precision engine",
+      "costUsd": 20000000,
+      "massKg": 2300,
+      "fuelUnits": 18,
+      "freeLandingCorrections": 1
+    }
+  ],
+  "cargoModules": [
+    {
+      "id": "c1",
+      "name": "Small bay",
+      "costUsd": 5000000,
+      "massKg": 300,
+      "size": 3,
+      "slots": 3
+    },
+    {
+      "id": "c2",
+      "name": "Medium bay",
+      "costUsd": 7000000,
+      "massKg": 450,
+      "size": 4,
+      "slots": 4
+    },
+    {
+      "id": "c3",
+      "name": "Large bay",
+      "costUsd": 9000000,
+      "massKg": 650,
+      "size": 6,
+      "slots": 6
+    },
+    {
+      "id": "c4",
+      "name": "Light large bay",
+      "costUsd": 12000000,
+      "massKg": 500,
+      "size": 6,
+      "slots": 6
+    }
+  ],
+  "powerSystems": [
+    {
+      "id": "p1",
+      "name": "Standard power",
+      "costUsd": 8000000,
+      "massKg": 350,
+      "maxPowerKw": 5,
+      "batteryKwh": 6
+    },
+    {
+      "id": "p2",
+      "name": "High power",
+      "costUsd": 12000000,
+      "massKg": 600,
+      "maxPowerKw": 8,
+      "batteryKwh": 6
+    },
+    {
+      "id": "p3",
+      "name": "Long battery life",
+      "costUsd": 11000000,
+      "massKg": 550,
+      "maxPowerKw": 5,
+      "batteryKwh": 12
+    },
+    {
+      "id": "p4",
+      "name": "Light power",
+      "costUsd": 7000000,
+      "massKg": 260,
+      "maxPowerKw": 4,
+      "batteryKwh": 4
+    }
+  ],
+  "cargo": [
+    {
+      "id": "panel",
+      "name": "P-4 power panel",
+      "costUsd": 6000000,
+      "massKg": 400,
+      "slots": 2,
+      "required": true,
+      "adjacentSlots": true
+    },
+    {
+      "id": "kit",
+      "name": "Insulated repair kit",
+      "costUsd": 3000000,
+      "massKg": 120,
+      "slots": 1,
+      "required": true
+    },
+    {
+      "id": "laser",
+      "name": "Laser cutter",
+      "costUsd": 8000000,
+      "massKg": 300,
+      "slots": 1,
+      "extraPowerKw": 3
+    },
+    {
+      "id": "battery",
+      "name": "Portable battery",
+      "costUsd": 6000000,
+      "massKg": 280,
+      "slots": 1
+    },
+    {
+      "id": "spares",
+      "name": "Spare parts box",
+      "costUsd": 4000000,
+      "massKg": 250,
+      "slots": 1
+    },
+    {
+      "id": "fuel",
+      "name": "Extra flight fuel",
+      "costUsd": 3000000,
+      "massKg": 600,
+      "slots": 1,
+      "extraFuelUnits": 8
+    }
+  ],
+  "landingMap": [
+    {
+      "id": "main",
+      "name": "Beacon Pad",
+      "openMinute": 0,
+      "closeMinute": 4,
+      "fuelUnits": 10,
+      "description": "Near the base. The path is short, but the pad enters shadow sooner."
+    },
+    {
+      "id": "ridge",
+      "name": "Ridge Pad",
+      "openMinute": 0,
+      "closeMinute": 8,
+      "fuelUnits": 13,
+      "description": "More time in sunlight. The walk to the base is longer."
+    }
+  ],
+  "resultMessages": {
+    "blocked": "Launch is on hold. Open the checklist to see what to fix.",
+    "success": "We are in orbit. Both repair supplies are secure. Next stop: Pole-7.",
+    "successWithTradeoffs": "We are in orbit. Both repair supplies are secure. Check your flight log for the backup plan."
+  },
+  "sources": [
+    {
+      "url": "https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/ideal-rocket-equation/",
+      "use": "Mass and engine performance"
+    },
+    {
+      "url": "https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/nozzle-design/",
+      "use": "How nozzle shape affects thrust"
+    },
+    {
+      "url": "https://science.nasa.gov/photojournal/swot-spacecraft-encapsulated-in-payload-fairing/",
+      "use": "How the launch cover protects the payload"
+    },
+    {
+      "url": "https://www.nasa.gov/reference/european-service-module/",
+      "use": "Solar arrays and battery charging"
+    },
+    {
+      "url": "https://science.nasa.gov/photojournal/south-pole-illumination-map/",
+      "use": "Lunar south pole lighting maps"
+    }
+  ],
+  "sceneDialogue": [
+    {
+      "trigger": "garage_first_open",
+      "lines": [
+        {
+          "speaker": "{playerName}",
+          "line": "Leave room for the laser cutter?"
+        },
+        {
+          "speaker": "Sam - Flight Engineer",
+          "line": "The laser can free a jammed cover in seconds, if the ship can power it. With the hand tools, it'll just take a little longer."
+        }
+      ]
+    },
+    {
+      "trigger": "required_cargo_secured",
+      "lines": [
+        {
+          "speaker": "Sam - Flight Engineer",
+          "line": "Both locks are green. That panel stays where you put it when the engines light."
+        }
+      ]
+    },
+    {
+      "trigger": "laser_overload",
+      "lines": [
+        {
+          "speaker": "Sam - Flight Engineer",
+          "line": "The laser pushed us over the power limit. Its breaker tripped. Cabin and radio are still on."
+        },
+        {
+          "speaker": "Sam - Flight Engineer",
+          "line": "We can swap the power system here or leave the laser off and open the cover by hand on the Moon."
+        }
+      ]
+    },
+    {
+      "trigger": "landing_map_first_open",
+      "lines": [
+        {
+          "speaker": "{playerName}",
+          "line": "Beacon Pad is right beside the base. Why did Khulan mark a second one?"
+        },
+        {
+          "speaker": "Sam - Flight Engineer",
+          "line": "Ridge Pad stays lit longer. We'll spend more fuel getting there and carry the panel farther, but it's there if we miss the Beacon window."
+        }
+      ]
+    },
+    {
+      "trigger": "orbit_reached",
+      "lines": [
+        {
+          "speaker": "Earth Flight Control",
+          "line": "Commander {playerName}, you're in orbit. Both repair items are secure. Pole-7 is listening on the backup channel."
+        },
+        {
+          "speaker": "{playerName}",
+          "line": "Khulan, we've got your panel and both locks are green. See you on the Moon."
+        }
+      ]
+    }
+  ],
+  "playerSetup": {
+    "trigger": "new_game",
+    "title": "Choose your commander",
+    "characters": [
+      {
+        "id": "commander_male",
+        "label": "Male commander",
+        "defaultName": "Alex"
+      },
+      {
+        "id": "commander_female",
+        "label": "Female commander",
+        "defaultName": "Ari"
+      }
+    ],
+    "nameLabel": "Commander name",
+    "namePrompt": "Enter your name",
+    "nameHelp": "Leave it blank to use the suggested name.",
+    "maxNameLength": 24,
+    "continueLabel": "Start mission",
+    "nameToken": "{playerName}",
+    "savedFields": [
+      "characterId",
+      "playerName"
+    ]
+  }
+}

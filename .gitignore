@@ -14,6 +14,9 @@
 /.vscode/
 /.idea/
 *.csproj
+!Tests/**/*.csproj
+Tests/**/bin/
+Tests/**/obj/
 *.sln
 *.slnx
 *.suo
