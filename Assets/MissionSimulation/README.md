@@ -34,4 +34,4 @@ NASA background for the communications and orbit concepts (not a source for this
 
 ## Integration status
 
-The team repository, Unity project, UI and Unity editor were not present when this module was created. The branch, pull requests, scene integration, tests in Unity, builds, and additional mission configurations therefore remain to be completed in the real team project. Do not replace the team's project or initialize a separate repository inside it without coordinating integration.
+The module is on the `feature/mission-simulation` branch in a draft pull request. A complete Unity project and UI were not yet available. Scene integration, tests in Unity, builds, and additional mission configurations remain to be completed in the team project. The C# simulation core compiled locally, but the local operating system blocked execution of the standalone test program; this is not a passed test run.
