@@ -73,5 +73,26 @@ namespace MissionSimulation.Tests
             var result = new EarthLaunchChecklist().Validate(scenario,design,packing.Snapshot(),impossible,new LandingPlan { padId="main", hasArrivalMinute=true, arrivalMinute=3 });
             Assert.IsTrue(result.issues.Any(x=>x.code=="power_test_state")); Assert.IsFalse(result.CanLaunch); Assert.IsFalse(result.laserPowered);
         }
+        [Test] public void PowerTestRestoresWithoutSharingSnapshot()
+        {
+            var saved = power.Snapshot(); EarthPowerTest restored;
+            Assert.IsTrue(EarthPowerTest.TryRestore(scenario, design, saved, out restored));
+            saved.radioOn = false; Assert.IsTrue(restored.EssentialsPassed);
+        }
+        [Test] public void PowerTestRejectsChangedSystemAndImpossibleLaser()
+        {
+            var saved = power.Snapshot(); EarthPowerTest restored;
+            design.powerSystemId = "p2"; Assert.IsFalse(EarthPowerTest.TryRestore(scenario, design, saved, out restored));
+            design.powerSystemId = "p1"; saved.laserOn = true;
+            Assert.IsFalse(EarthPowerTest.TryRestore(scenario, design, saved, out restored)); Assert.IsNull(restored);
+        }
+        [Test] public void PowerTestRestoresLaserTripWhenEquipmentMatches()
+        {
+            design.cargoModuleId = "c2"; design.fairingId = "f2";
+            design.cargo = new[] { new CargoPlacement { cargoId="panel",startSlot=0 }, new CargoPlacement { cargoId="kit",startSlot=2 }, new CargoPlacement { cargoId="laser",startSlot=3 } };
+            var test = new EarthPowerTest("p1",5f,true); test.SetCabin(true); test.SetRadio(true); Assert.IsFalse(test.TryLaser());
+            EarthPowerTest restored; Assert.IsTrue(EarthPowerTest.TryRestore(scenario, design, test.Snapshot(), out restored));
+            Assert.IsTrue(restored.Snapshot().laserTripped); Assert.IsTrue(restored.EssentialsPassed);
+        }
     }
 }

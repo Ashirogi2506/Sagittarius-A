@@ -23,6 +23,23 @@ namespace MissionSimulation.FarSignal
             this.capacityKw = capacityKw; this.laserLoaded = laserLoaded;
             state = new EarthPowerTestState { powerSystemId = powerSystemId };
         }
+        // Rebuild transient test logic only from a valid snapshot for the current equipment.
+        public static bool TryRestore(EarthScenario scenario, EarthDesign design, EarthPowerTestState saved, out EarthPowerTest restored)
+        {
+            restored = null;
+            if (scenario == null || scenario.powerSystems == null || design == null || design.cargo == null || saved == null || string.IsNullOrWhiteSpace(design.powerSystemId) || saved.powerSystemId != design.powerSystemId) return false;
+            var systems = scenario.powerSystems.Where(x => x != null && x.id == design.powerSystemId).ToArray();
+            if (systems.Length != 1 || float.IsNaN(systems[0].maxPowerKw) || float.IsInfinity(systems[0].maxPowerKw) || systems[0].maxPowerKw < 0) return false;
+            if (design.cargo.Any(x => x == null || string.IsNullOrWhiteSpace(x.cargoId)) || design.cargo.Select(x => x.cargoId).Distinct().Count() != design.cargo.Length) return false;
+            bool laserLoaded = design.cargo.Any(x => x.cargoId == "laser");
+            if ((saved.laserOn && saved.laserTripped) || ((saved.laserOn || saved.laserTripped) && !laserLoaded) ||
+                (saved.laserOn && (!saved.cabinOn || !saved.radioOn || systems[0].maxPowerKw < CabinKw + RadioKw + LaserKw)) ||
+                (saved.laserTripped && systems[0].maxPowerKw >= CabinKw + RadioKw + LaserKw)) return false;
+            var candidate = new EarthPowerTest(design.powerSystemId, systems[0].maxPowerKw, laserLoaded);
+            candidate.state.cabinOn = saved.cabinOn; candidate.state.radioOn = saved.radioOn;
+            candidate.state.laserOn = saved.laserOn; candidate.state.laserTripped = saved.laserTripped;
+            restored = candidate; return true;
+        }
         public void SetCabin(bool on) { state.cabinOn = on; if (!on) state.laserOn = false; }
         public void SetRadio(bool on) { state.radioOn = on; if (!on) state.laserOn = false; }
         public bool EssentialsPassed { get { return state.cabinOn && state.radioOn && capacityKw >= CabinKw + RadioKw; } }
