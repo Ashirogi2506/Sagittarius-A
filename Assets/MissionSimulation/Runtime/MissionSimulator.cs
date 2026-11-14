@@ -14,7 +14,7 @@ namespace MissionSimulation
         {
             if (s == null || d == null) throw new ArgumentNullException(s == null ? "scenario" : "design");
             var r = new ValidationResult(); var b = r.resources;
-            if (s.objective == null || s.components == null || s.orbits == null || s.launchers == null || s.budget <= 0 || s.durationDays <= 0 || s.objective.requiredScience <= 0 || s.objective.requiredDataMB <= 0)
+            if (s.objective == null || s.components == null || s.orbits == null || s.launchers == null || s.budget <= 0 || s.durationDays <= 0 || s.objective.requiredScience <= 0 || s.objective.requiredDataMB <= 0 || s.partialThreshold <= 0 || s.successThreshold > 1 || s.partialThreshold >= s.successThreshold)
             { Issue(r, Severity.Blocking, "scenario", "Scenario is incomplete or has invalid budget, duration or objective targets."); return r; }
             var orbit = s.orbits.FirstOrDefault(x => x.id == d.orbitId);
             var launcher = s.launchers.FirstOrDefault(x => x.id == d.launcherId);
@@ -79,8 +79,9 @@ namespace MissionSimulation
             { result.events.Add(e.description); scienceFactor *= Clamp(e.scienceMultiplier); dataFactor *= Clamp(e.dataMultiplier); reliability *= Clamp(e.reliabilityMultiplier); }
             reliability = Clamp(reliability);
             // Simplified aggregate model: rates are daily averages and reliability scales expected returned output.
-            float generated = Math.Max(0, b.dataMBPerDay) * s.durationDays * power * fuel * support * dataFactor;
-            result.dataReturnedMB = Math.Min(generated, Math.Max(0, b.downlinkMBPerDay) * s.durationDays) * reliability;
+            float generated = Math.Max(0, b.dataMBPerDay) * s.durationDays * power * fuel * support;
+            // Data events represent losses from the downlink, including when capacity is already saturated.
+            result.dataReturnedMB = Math.Min(generated, Math.Max(0, b.downlinkMBPerDay) * s.durationDays) * reliability * dataFactor;
             result.scienceDelivered = b.science * Math.Max(0, orbit.scienceMultiplier) * power * fuel * support * suitable * scienceFactor * reliability;
             result.reliability = reliability;
             float dataProgress = Clamp(result.dataReturnedMB / s.objective.requiredDataMB);
