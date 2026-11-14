@@ -268,5 +268,21 @@
       "dataMultiplier": 0.7,
       "reliabilityMultiplier": 1
     }
-  ]
+  ],
+  "requiredSystemTags": [
+    "bus",
+    "power",
+    "communications"
+  ],
+  "rules": {
+    "objectivePoints": 30,
+    "sciencePoints": 20,
+    "engineeringPoints": 15,
+    "efficiencyPoints": 10,
+    "reliabilityPoints": 10,
+    "dataPoints": 15,
+    "warningPenalty": 0.15,
+    "missingSupportFactor": 0.5,
+    "shortageReliabilityFloor": 0.5
+  }
 }
