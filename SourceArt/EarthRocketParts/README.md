@@ -6,7 +6,7 @@ These files intentionally live outside `Assets/`. Keeping authoring sources sepa
 
 ## Import target
 
-The reproducible Blender exporter is `Tools/Blender/export_earth_parts.py`. It recenters every model, preserves relative variant sizes, scales hardware for the exploded ship preview, and keeps cargo readable. It writes one FBX per row to:
+The reproducible Blender exporter is `Tools/Blender/export_earth_parts.py`. It recenters every model, preserves relative variant sizes, scales hardware for the exploded ship preview, keeps cargo readable, triangulates geometry, and translates semantic Blender material names into the shared Far Signal aerospace palette. It writes one FBX per row to:
 
 `Assets/SagittariusA/Resources/EarthParts/<ID>.fbx`
 
