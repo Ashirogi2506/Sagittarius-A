@@ -48,5 +48,18 @@ namespace MissionSimulation.Tests
             var d = Design(); d.componentIds = new[] { "camera", "camera" };
             Assert.IsFalse(simulator.Validate(scenario, d).CanLaunch);
         }
+        [Test] public void GroundOutageReducesReturnWhenDownlinkIsSaturated()
+        {
+            var d = Design("small-radio");
+            var baseline = simulator.Run(scenario, d, 42);
+            scenario.events = new[] { new MissionEvent { description = "Outage", probability = 1f, scienceMultiplier = 1f, dataMultiplier = 0.5f, reliabilityMultiplier = 1f } };
+            var affected = simulator.Run(scenario, d, 42);
+            Assert.AreEqual(baseline.dataReturnedMB * 0.5f, affected.dataReturnedMB, 0.01f);
+        }
+        [Test] public void InvalidOutcomeThresholdsBlockLaunch()
+        {
+            scenario.partialThreshold = 0;
+            Assert.IsFalse(simulator.Validate(scenario, Design()).CanLaunch);
+        }
     }
 }
