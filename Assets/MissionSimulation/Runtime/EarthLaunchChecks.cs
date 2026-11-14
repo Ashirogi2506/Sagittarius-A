@@ -53,7 +53,7 @@ namespace MissionSimulation.FarSignal
                 Issue(result, IssueLevel.Warning, "landing_shadow", "This pad is in shadow at the selected time.", "Choose an earlier time or another pad.");
             if (power == null || power.powerSystemId != design.powerSystemId || !power.cabinOn || !power.radioOn || result.availablePowerKw < 3f)
                 Issue(result, IssueLevel.Error, "power_test", "The cabin and radio power test is incomplete for the selected power system.", "Turn on the cabin and radio and complete the test for this system.");
-            if (bay == null || cargo == null || cargo.items == null || cargo.slotCount != bay.slots || design.cargo == null)
+            if (bay == null || cargo == null || cargo.items == null || cargo.bayId != design.cargoModuleId || cargo.slotCount != bay.slots || design.cargo == null)
                 Issue(result, IssueLevel.Error, "cargo_packing", "Cargo packing is missing or belongs to a different bay.", "Repack and lock the cargo in the selected bay.");
             else
             {

@@ -5,7 +5,7 @@ using System.Linq;
 namespace MissionSimulation.Minigames
 {
     [Serializable] public class PackedCargo { public string id; public int startSlot; public bool locked; }
-    [Serializable] public class CargoPackingState { public int slotCount; public List<PackedCargo> items = new List<PackedCargo>(); }
+    [Serializable] public class CargoPackingState { public string bayId; public int slotCount; public List<PackedCargo> items = new List<PackedCargo>(); }
     public sealed class CargoPackingMinigame
     {
         readonly CargoPackingState state;
@@ -14,6 +14,33 @@ namespace MissionSimulation.Minigames
         {
             if (slots != 3 && slots != 4 && slots != 6) throw new ArgumentException("The bay must have 3, 4 or 6 slots.", "slots");
             state = new CargoPackingState { slotCount = slots };
+        }
+        // The bay ID distinguishes different bays with the same number of slots.
+        public CargoPackingMinigame(string bayId, int slots) : this(slots)
+        {
+            if (string.IsNullOrWhiteSpace(bayId)) throw new ArgumentException("A bay ID is required.", "bayId");
+            state.bayId = bayId;
+        }
+        public bool ChangeBay(string bayId, int slots)
+        {
+            if (string.IsNullOrWhiteSpace(bayId) || (slots != 3 && slots != 4 && slots != 6)) return false;
+            if (state.bayId == bayId && state.slotCount == slots) return true;
+            state.bayId = bayId; state.slotCount = slots; state.items.Clear();
+            return true;
+        }
+        // A mismatched or malformed snapshot is rejected without creating partial state.
+        public static bool TryRestore(CargoPackingState saved, string expectedBayId, int expectedSlots, out CargoPackingMinigame restored)
+        {
+            restored = null;
+            if (saved == null || saved.items == null || string.IsNullOrWhiteSpace(expectedBayId) || saved.bayId != expectedBayId || saved.slotCount != expectedSlots || (expectedSlots != 3 && expectedSlots != 4 && expectedSlots != 6)) return false;
+            var candidate = new CargoPackingMinigame(expectedBayId, expectedSlots);
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var item in saved.items)
+            {
+                if (item == null || string.IsNullOrWhiteSpace(item.id) || !seen.Add(item.id) || !candidate.Place(item.id, item.startSlot).accepted) return false;
+                if (item.locked && !candidate.Lock(item.id).accepted) return false;
+            }
+            restored = candidate; return true;
         }
         static int Width(string id) { return id == "panel" ? 2 : 1; }
         public bool CanPlace(string id, int start)
@@ -56,6 +83,6 @@ namespace MissionSimulation.Minigames
             return new CartWheelResponse(true, "All required cargo is packed and locked.");
         }
         public CargoPackingState Snapshot()
-        { return new CargoPackingState { slotCount = state.slotCount, items = state.items.Select(x => new PackedCargo { id = x.id, startSlot = x.startSlot, locked = x.locked }).ToList() }; }
+        { return new CargoPackingState { bayId = state.bayId, slotCount = state.slotCount, items = state.items.Select(x => new PackedCargo { id = x.id, startSlot = x.startSlot, locked = x.locked }).ToList() }; }
     }
 }

@@ -12,7 +12,7 @@ namespace MissionSimulation.Tests
         {
             mission = JsonUtility.FromJson<EarthScenario>(Resources.Load<TextAsset>("FarSignal.Earth.proposed").text);
             design = new EarthDesign { launcherId="l1", nozzleId="n1", fairingId="f1", engineId="e1", cargoModuleId="c1", powerSystemId="p1", landingPadId="main", cargo=new[] { new CargoPlacement { cargoId="panel",startSlot=0 }, new CargoPlacement { cargoId="kit",startSlot=2 } } };
-            cargo = new CargoPackingMinigame(3); cargo.Place("panel",0); cargo.Place("kit",2); cargo.Lock("panel"); cargo.Lock("kit");
+            cargo = new CargoPackingMinigame("c1",3); cargo.Place("panel",0); cargo.Place("kit",2); cargo.Lock("panel"); cargo.Lock("kit");
             power = new EarthPowerTest("p1",5f,false); power.SetCabin(true); power.SetRadio(true);
             plan = new LandingPlan { padId="main", hasArrivalMinute=true, arrivalMinute=3 };
             commander = new CommanderIdentity { commanderId="commander_female", playerName="????", portraitReference="portrait" };

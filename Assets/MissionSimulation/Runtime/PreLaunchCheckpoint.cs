@@ -60,7 +60,7 @@ namespace MissionSimulation.FarSignal
             return new EarthDesign { launcherId=x.launcherId, nozzleId=x.nozzleId, fairingId=x.fairingId, engineId=x.engineId, cargoModuleId=x.cargoModuleId, powerSystemId=x.powerSystemId, landingPadId=x.landingPadId,
                 cargo=x.cargo.Select(p => new CargoPlacement { cargoId=p.cargoId, startSlot=p.startSlot }).ToArray() };
         }
-        static CargoPackingState CopyCargo(CargoPackingState x) { return new CargoPackingState { slotCount=x.slotCount, items=x.items.Select(p => new PackedCargo { id=p.id, startSlot=p.startSlot, locked=p.locked }).ToList() }; }
+        static CargoPackingState CopyCargo(CargoPackingState x) { return new CargoPackingState { bayId=x.bayId, slotCount=x.slotCount, items=x.items.Select(p => new PackedCargo { id=p.id, startSlot=p.startSlot, locked=p.locked }).ToList() }; }
         static EarthPowerTestState CopyPower(EarthPowerTestState x) { return new EarthPowerTestState { powerSystemId=x.powerSystemId, cabinOn=x.cabinOn, radioOn=x.radioOn, laserOn=x.laserOn, laserTripped=x.laserTripped }; }
         static LandingPlan CopyPlan(LandingPlan x) { return new LandingPlan { padId=x.padId, hasArrivalMinute=x.hasArrivalMinute, arrivalMinute=x.arrivalMinute }; }
     }
