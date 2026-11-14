@@ -66,6 +66,14 @@ namespace MissionSimulation.Tests
             design.cargo[0].startSlot=int.MaxValue;
             Assert.IsTrue(simulator.Validate(scenario,design).issues.Any(x=>x.code=="cargo_slots"));
         }
+        [Test] public void PanelCannotCrossTheRowInSixSlotBay()
+        {
+            design.cargoModuleId = "c3"; design.fairingId = "f3";
+            design.cargo = new[] { new CargoPlacement { cargoId = "panel", startSlot = 2 }, new CargoPlacement { cargoId = "kit", startSlot = 0 } };
+            var report = simulator.Validate(scenario, design);
+            Assert.IsFalse(report.CanLaunch);
+            Assert.IsTrue(report.issues.Any(x => x.code == "cargo_slots"));
+        }
         [Test] public void MissingMissionOrDesignReturnsBlockingIssue()
         {
             Assert.AreEqual(LaunchOutcome.Blocked, simulator.Evaluate(null, design).outcome);

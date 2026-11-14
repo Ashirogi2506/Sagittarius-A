@@ -163,7 +163,7 @@ namespace MissionSimulation.FarSignal
                 if (placement == null) { Add(r, IssueLevel.Error, "cargo", "A cargo placement is missing.", "Choose a cargo item and position."); continue; }
                 var item = s.cargo.FirstOrDefault(x => x.id == placement.cargoId);
                 if (item == null || !selected.Add(placement.cargoId)) { Add(r, IssueLevel.Error, "cargo", "An unknown or duplicate cargo item was selected.", "Remove the duplicate or select a valid item."); continue; }
-                if (item.slots <= 0 || placement.startSlot < 0 || placement.startSlot > bay.slots || item.slots > bay.slots - placement.startSlot)
+                if (item.slots <= 0 || placement.startSlot < 0 || placement.startSlot > bay.slots || item.slots > bay.slots - placement.startSlot || (bay.slots == 6 && item.adjacentSlots && item.slots == 2 && placement.startSlot / 3 != (placement.startSlot + 1) / 3))
                 { Add(r, IssueLevel.Error, "cargo_slots", item.name + " does not fit in the cargo bay.", "Move the item or select a larger cargo bay."); continue; }
                 try { r.costUsd = checked(r.costUsd + item.costUsd); }
                 catch (OverflowException) { Add(r, IssueLevel.Error, "scenario", "Cargo cost exceeds the supported range.", "Correct the cargo cost values."); return r; }
@@ -181,7 +181,7 @@ namespace MissionSimulation.FarSignal
             if (p.maxPowerKw < s.busPowerKw) Add(r, IssueLevel.Error, "essential_power", "The power system cannot support the ship's essential load.", "Choose a stronger power system.");
             if (p.batteryKwh < s.minimumBatteryKwh) Add(r, IssueLevel.Error, "battery", "Battery capacity is below the mission minimum.", "Choose a power system with a larger battery.");
             if (r.fuelUnits < s.minimumFuelUnits) Add(r, IssueLevel.Error, "fuel", "Fuel is below the minimum for launch.", "Choose a different engine or carry extra fuel.");
-            if (r.fuelUnits < pad.fuelUnits) Add(r, IssueLevel.Warning, "landing_fuel", "The selected pad needs more fuel than is currently available; attempting to land without enough fuel fails the mission.", "Add fuel, change engine, or plan the other pad.");
+            if (r.fuelUnits < pad.fuelUnits) Add(r, IssueLevel.Warning, "landing_fuel", "This pad needs " + pad.fuelUnits + " fuel units. You have " + r.fuelUnits + "; attempting to land without enough fuel returns you to the pre-launch checkpoint.", "Add fuel, change engine, or plan the other pad.");
             r.laserPowered = selected.Contains("laser") && r.requiredPowerKw <= r.availablePowerKw;
             if (r.requiredPowerKw > r.availablePowerKw && p.maxPowerKw >= s.busPowerKw) Add(r, IssueLevel.Warning, "optional_power", "Optional equipment exceeds available power; the laser remains off.", "Choose a stronger power system or use hand tools.");
             return r;

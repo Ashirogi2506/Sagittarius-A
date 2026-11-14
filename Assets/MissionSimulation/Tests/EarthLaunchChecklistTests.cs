@@ -42,5 +42,15 @@ namespace MissionSimulation.Tests
             Assert.IsFalse(p.TryLaser()); var s=p.Snapshot(); Assert.IsTrue(s.cabinOn); Assert.IsTrue(s.radioOn); Assert.IsTrue(s.laserTripped); Assert.IsFalse(s.laserOn);
             var upgraded = new EarthPowerTest("p2",8f,true); upgraded.SetCabin(true); upgraded.SetRadio(true); Assert.IsTrue(upgraded.TryLaser());
         }
+        [Test] public void ReplacingPowerSystemRequiresFreshTest()
+        {
+            design.powerSystemId = "p2";
+            var r = Check(3); Assert.IsFalse(r.CanLaunch); Assert.IsTrue(r.issues.Any(x=>x.code=="power_test"));
+        }
+        [Test] public void SmallPayloadMarginProducesWarning()
+        {
+            scenario.launchers.First(x=>x.id=="l1").basePayloadKg = 9670f;
+            var r = Check(3); Assert.AreEqual(100f,r.payloadMarginKg); Assert.IsTrue(r.issues.Any(x=>x.code=="mass_margin"));
+        }
     }
 }
