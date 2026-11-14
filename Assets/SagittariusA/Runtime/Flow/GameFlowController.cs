@@ -82,6 +82,7 @@ namespace SagittariusA.Gameplay.Flow
         private Text maleStatus;
         private Text femaleStatus;
         private InputField nameInput;
+        private Button continueButton;
         private string selectedId;
         private Color selectedColor;
         private Color normalColor;
@@ -119,8 +120,23 @@ namespace SagittariusA.Gameplay.Flow
 
             maleButton.onClick.AddListener(SelectMale);
             femaleButton.onClick.AddListener(SelectFemale);
+            nameInput.onValueChanged.AddListener(CacheName);
             nameInput.onEndEdit.AddListener(SaveName);
             RefreshSelection();
+        }
+
+        public void BindContinueButton(Button configuredContinueButton)
+        {
+            if (continueButton != null)
+            {
+                continueButton.onClick.RemoveListener(SaveCurrentProfile);
+            }
+
+            continueButton = configuredContinueButton;
+            if (continueButton != null)
+            {
+                continueButton.onClick.AddListener(SaveCurrentProfile);
+            }
         }
 
         private void SelectMale()
@@ -156,6 +172,17 @@ namespace SagittariusA.Gameplay.Flow
             PlayerPrefs.Save();
         }
 
+        private void CacheName(string value)
+        {
+            PlayerPrefs.SetString(CommanderNameKey, value);
+        }
+
+        private void SaveCurrentProfile()
+        {
+            PlayerPrefs.SetString(CommanderIdKey, selectedId);
+            SaveName(nameInput.text);
+        }
+
         private void RefreshSelection()
         {
             bool maleSelected = selectedId != "commander_female";
@@ -181,8 +208,43 @@ namespace SagittariusA.Gameplay.Flow
 
             if (nameInput != null)
             {
+                nameInput.onValueChanged.RemoveListener(CacheName);
                 nameInput.onEndEdit.RemoveListener(SaveName);
             }
+
+            if (continueButton != null)
+            {
+                continueButton.onClick.RemoveListener(SaveCurrentProfile);
+            }
+        }
+    }
+
+    internal sealed class CommanderNameTextView : MonoBehaviour
+    {
+        private Text target;
+        private string textTemplate;
+
+        public void Configure(Text configuredTarget, string configuredTemplate)
+        {
+            target = configuredTarget;
+            textTemplate = configuredTemplate;
+            Refresh();
+        }
+
+        private void OnEnable()
+        {
+            Refresh();
+        }
+
+        private void Refresh()
+        {
+            if (target == null || string.IsNullOrEmpty(textTemplate))
+            {
+                return;
+            }
+
+            string playerName = PlayerPrefs.GetString("FarSignal.CommanderName", "Alex");
+            target.text = textTemplate.Replace("{playerName}", playerName);
         }
     }
 
@@ -329,6 +391,11 @@ namespace SagittariusA.Gameplay.Flow
 
             Button primary = CreateButton("PrimaryAction", panel.transform, primaryLabel, Accent);
             Stretch(primary.GetComponent<RectTransform>(), new Vector2(0.73f, 0.055f), new Vector2(0.96f, 0.16f), Vector2.zero, Vector2.zero);
+
+            if (screen == GameScreen.CommanderSetup)
+            {
+                content.GetComponent<CommanderSetupView>()?.BindContinueButton(primary);
+            }
 
             Button secondary = null;
             if (!string.IsNullOrWhiteSpace(secondaryLabel))
@@ -504,7 +571,9 @@ namespace SagittariusA.Gameplay.Flow
         {
             Image call = CreateCard(parent, "Pole7Call", new Vector2(0.03f, 0.5f), new Vector2(0.64f, 0.92f), CardSelected);
             CreateLabel(call.transform, "INCOMING · POLE-7", 15, FontStyle.Bold, Accent, new Vector2(0.04f, 0.76f), new Vector2(0.96f, 0.92f));
-            CreateLabel(call.transform, "“Our main panel burned out. The crew is safe on battery power, but the ridge beacons have gone dark.”", 21, FontStyle.Bold, TextColor, new Vector2(0.04f, 0.31f), new Vector2(0.96f, 0.76f));
+            const string briefingCall = "“Commander {playerName}, this is Pole-7. Our main panel burned out. The crew is safe on battery power, but the ridge beacons have gone dark.”";
+            Text briefingText = CreateLabel(call.transform, briefingCall, 19, FontStyle.Bold, TextColor, new Vector2(0.04f, 0.28f), new Vector2(0.96f, 0.76f));
+            briefingText.gameObject.AddComponent<CommanderNameTextView>().Configure(briefingText, briefingCall);
             CreateLabel(call.transform, "MIRA · POLE-7 OPERATOR", 14, FontStyle.Bold, MutedText, new Vector2(0.04f, 0.1f), new Vector2(0.96f, 0.28f));
 
             Image cargo = CreateCard(parent, "RequiredCargo", new Vector2(0.67f, 0.5f), new Vector2(0.97f, 0.92f), Card);
@@ -581,9 +650,12 @@ namespace SagittariusA.Gameplay.Flow
 
             Image breakdown = CreateCard(parent, "Breakdown", new Vector2(0.33f, 0.08f), new Vector2(0.68f, 0.92f), Card);
             CreateLabel(breakdown.transform, "FLIGHT LOG", 17, FontStyle.Bold, TextColor, new Vector2(0.07f, 0.8f), new Vector2(0.93f, 0.93f));
-            CreateReviewLine(breakdown.transform, "Repair supplies", "Both secured", 0.62f);
-            CreateReviewLine(breakdown.transform, "Budget used", "$110M / $115M", 0.43f);
-            CreateReviewLine(breakdown.transform, "Landing plan", "Beacon Pad", 0.24f);
+            Text commanderValue = CreateLabel(breakdown.transform, "{playerName}", 17, FontStyle.Bold, TextColor, new Vector2(0.45f, 0.69f), new Vector2(0.94f, 0.78f), TextAnchor.MiddleRight);
+            CreateLabel(breakdown.transform, "Commander", 16, FontStyle.Normal, MutedText, new Vector2(0.06f, 0.69f), new Vector2(0.45f, 0.78f));
+            commanderValue.gameObject.AddComponent<CommanderNameTextView>().Configure(commanderValue, "{playerName}");
+            CreateReviewLine(breakdown.transform, "Repair supplies", "Both secured", 0.52f);
+            CreateReviewLine(breakdown.transform, "Budget used", "$110M / $115M", 0.34f);
+            CreateReviewLine(breakdown.transform, "Landing plan", "Beacon Pad", 0.16f);
 
             Image lesson = CreateCard(parent, "Lesson", new Vector2(0.71f, 0.08f), new Vector2(0.97f, 0.92f), Card);
             CreateLabel(lesson.transform, "NEXT TRANSMISSION", 17, FontStyle.Bold, TextColor, new Vector2(0.08f, 0.8f), new Vector2(0.92f, 0.93f));
