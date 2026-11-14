@@ -60,6 +60,14 @@ namespace SagittariusA.Gameplay.Editor
             Image background = CreateImage("Background", root.transform, Background);
             Stretch(background.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
+            GameObject cameraObject = new GameObject("UI Test Camera", typeof(Camera));
+            cameraObject.transform.SetParent(root.transform, false);
+            Camera camera = cameraObject.GetComponent<Camera>();
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = Background;
+            camera.cullingMask = 0;
+            camera.depth = -100f;
+
             GameObject flowRoot = new GameObject("ScreenFlow", typeof(RectTransform), typeof(GameFlowController));
             flowRoot.transform.SetParent(root.transform, false);
             Stretch(flowRoot.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);

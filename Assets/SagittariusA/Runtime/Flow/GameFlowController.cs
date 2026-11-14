@@ -73,6 +73,17 @@ namespace SagittariusA.Gameplay.Flow
 
         public static void Build(Transform flowRoot)
         {
+            if (Camera.allCamerasCount == 0)
+            {
+                GameObject cameraObject = new GameObject("UI Fallback Camera", typeof(Camera));
+                cameraObject.transform.SetParent(flowRoot, false);
+                Camera camera = cameraObject.GetComponent<Camera>();
+                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.backgroundColor = Background;
+                camera.cullingMask = 0;
+                camera.depth = -100f;
+            }
+
             GameObject canvasObject = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             canvasObject.transform.SetParent(flowRoot, false);
 
