@@ -61,5 +61,21 @@ namespace MissionSimulation.Tests
             scenario.partialThreshold = 0;
             Assert.IsFalse(simulator.Validate(scenario, Design()).CanLaunch);
         }
+        [Test] public void UnsuitableExtraInstrumentDoesNotCancelSuitableCamera()
+        {
+            var extra = scenario.components.First(x => x.id == "thermal");
+            extra.destinations = new[] { "Mars" };
+            var d = Design(); d.componentIds = new[] { "bus", "solar", "radio", "fuel", "shield", "camera", "thermal" };
+            var result = simulator.Run(scenario, d, 42);
+            Assert.IsTrue(result.validation.issues.Any(x => x.code == "destination"));
+            Assert.Greater(result.scienceDelivered, 0f);
+            Assert.AreEqual(80f, result.validation.resources.science);
+        }
+        [Test] public void ScoreWeightsComeFromScenario()
+        {
+            scenario.rules.objectivePoints = 12f;
+            var result = simulator.Run(scenario, Design(), 42);
+            Assert.AreEqual(12f, result.score.entries.First(x => x.category == "Objective completion").maximum);
+        }
     }
 }
