@@ -1,0 +1,112 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using MissionSimulation.Minigames;
+
+namespace MissionSimulation.FarSignal
+{
+    // Draft game values from the campaign brief, not real spacecraft ratings.
+    [Serializable] public class EarthPowerTestState
+    {
+        public string powerSystemId;
+        public bool cabinOn, radioOn, laserOn, laserTripped;
+    }
+    public sealed class EarthPowerTest
+    {
+        const float CabinKw = 2f, RadioKw = 1f, LaserKw = 3f;
+        readonly float capacityKw;
+        readonly bool laserLoaded;
+        readonly EarthPowerTestState state;
+        public EarthPowerTest(string powerSystemId, float capacityKw, bool laserLoaded)
+        {
+            if (string.IsNullOrWhiteSpace(powerSystemId) || float.IsNaN(capacityKw) || float.IsInfinity(capacityKw) || capacityKw < 0) throw new ArgumentException("A valid power system and capacity are required.");
+            this.capacityKw = capacityKw; this.laserLoaded = laserLoaded;
+            state = new EarthPowerTestState { powerSystemId = powerSystemId };
+        }
+        // Rebuild transient test logic only from a valid snapshot for the current equipment.
+        public static bool TryRestore(EarthScenario scenario, EarthDesign design, EarthPowerTestState saved, out EarthPowerTest restored)
+        {
+            restored = null;
+            if (scenario == null || scenario.powerSystems == null || design == null || design.cargo == null || saved == null || string.IsNullOrWhiteSpace(design.powerSystemId) || saved.powerSystemId != design.powerSystemId) return false;
+            var systems = scenario.powerSystems.Where(x => x != null && x.id == design.powerSystemId).ToArray();
+            if (systems.Length != 1 || float.IsNaN(systems[0].maxPowerKw) || float.IsInfinity(systems[0].maxPowerKw) || systems[0].maxPowerKw < 0) return false;
+            if (design.cargo.Any(x => x == null || string.IsNullOrWhiteSpace(x.cargoId)) || design.cargo.Select(x => x.cargoId).Distinct().Count() != design.cargo.Length) return false;
+            bool laserLoaded = design.cargo.Any(x => x.cargoId == "laser");
+            if ((saved.laserOn && saved.laserTripped) || ((saved.laserOn || saved.laserTripped) && !laserLoaded) ||
+                (saved.laserOn && (!saved.cabinOn || !saved.radioOn || systems[0].maxPowerKw < CabinKw + RadioKw + LaserKw)) ||
+                (saved.laserTripped && systems[0].maxPowerKw >= CabinKw + RadioKw + LaserKw)) return false;
+            var candidate = new EarthPowerTest(design.powerSystemId, systems[0].maxPowerKw, laserLoaded);
+            candidate.state.cabinOn = saved.cabinOn; candidate.state.radioOn = saved.radioOn;
+            candidate.state.laserOn = saved.laserOn; candidate.state.laserTripped = saved.laserTripped;
+            restored = candidate; return true;
+        }
+        public void SetCabin(bool on) { state.cabinOn = on; if (!on) state.laserOn = false; }
+        public void SetRadio(bool on) { state.radioOn = on; if (!on) state.laserOn = false; }
+        public bool EssentialsPassed { get { return state.cabinOn && state.radioOn && capacityKw >= CabinKw + RadioKw; } }
+        public bool TryLaser()
+        {
+            if (!laserLoaded || !EssentialsPassed) return false;
+            if (capacityKw < CabinKw + RadioKw + LaserKw) { state.laserOn = false; state.laserTripped = true; return false; }
+            state.laserTripped = false; state.laserOn = true; return true;
+        }
+        public EarthPowerTestState Snapshot() { return new EarthPowerTestState { powerSystemId = state.powerSystemId, cabinOn = state.cabinOn, radioOn = state.radioOn, laserOn = state.laserOn, laserTripped = state.laserTripped }; }
+    }
+
+    [Serializable] public class LandingPlan { public string padId; public bool hasArrivalMinute; public float arrivalMinute; }
+    public sealed class EarthLaunchChecklist
+    {
+        const float MaxPlanningMinute = 10f, LowMassMarginKg = 100f;
+        static void Issue(LaunchReport r, IssueLevel level, string code, string explanation, string fix) { r.issues.Add(new Issue(level, code, explanation, fix)); }
+        // Preview only: does not spend fuel, persist a save, or initiate launch.
+        public LaunchReport Validate(EarthScenario scenario, EarthDesign design, CargoPackingState cargo, EarthPowerTestState power, LandingPlan plan)
+        {
+            var result = new EarthLaunchSimulator().Validate(scenario, design);
+            if (scenario == null || design == null || scenario.cargoModules == null || scenario.landingMap == null) return result;
+            var bay = scenario.cargoModules.FirstOrDefault(x => x != null && x.id == design.cargoModuleId);
+            var pad = plan == null ? null : scenario.landingMap.FirstOrDefault(x => x != null && x.id == plan.padId);
+            if (plan == null || pad == null || !plan.hasArrivalMinute || float.IsNaN(plan.arrivalMinute) || float.IsInfinity(plan.arrivalMinute) || plan.arrivalMinute < 0 || plan.arrivalMinute > MaxPlanningMinute || design.landingPadId != plan.padId)
+                Issue(result, IssueLevel.Error, "landing_plan", "Choose a landing pad and an arrival minute from 0 to 10.", "Select a matching pad and time on the map.");
+            else if (plan.arrivalMinute < pad.openMinute || plan.arrivalMinute >= pad.closeMinute)
+                Issue(result, IssueLevel.Warning, "landing_shadow", "This pad is in shadow at the selected time.", "Choose an earlier time or another pad.");
+            if (power == null || power.powerSystemId != design.powerSystemId || !power.cabinOn || !power.radioOn || result.availablePowerKw < 3f)
+                Issue(result, IssueLevel.Error, "power_test", "The cabin and radio power test is incomplete for the selected power system.", "Turn on the cabin and radio and complete the test for this system.");
+            // Report the tested state, not merely whether the selected hardware could power the laser.
+            bool laserLoaded = design.cargo != null && design.cargo.Any(x => x != null && x.cargoId == "laser");
+            bool invalidLaserState = power != null && ((power.laserOn && power.laserTripped) ||
+                ((power.laserOn || power.laserTripped) && !laserLoaded) ||
+                (power.laserOn && (!power.cabinOn || !power.radioOn || result.availablePowerKw < 6f)) ||
+                (power.laserTripped && result.availablePowerKw >= 6f));
+            if (invalidLaserState)
+                Issue(result, IssueLevel.Error, "power_test_state", "The saved laser test does not match the selected equipment or power system.", "Repeat the power test with the current cargo and power system.");
+            result.laserPowered = power != null && !invalidLaserState && power.powerSystemId == design.powerSystemId && power.laserOn;
+            // The resource preview includes all optional loads. The actual checklist must
+            // reflect the player's test, and warn about an overload only if it was attempted.
+            result.issues.RemoveAll(x => x.code == "optional_power");
+            if (power != null && !invalidLaserState && power.powerSystemId == design.powerSystemId && power.laserTripped)
+                Issue(result, IssueLevel.Warning, "optional_power", "The cabin, radio, and laser need 6 kW. Your system supplies " + result.availablePowerKw + " kW.", "Use a stronger power system or open the cover by hand on the Moon.");
+            result.requiredPowerKw = (power != null && power.cabinOn ? 2f : 0f) + (power != null && power.radioOn ? 1f : 0f) + (result.laserPowered ? 3f : 0f);
+            if (bay == null || cargo == null || cargo.items == null || cargo.bayId != design.cargoModuleId || cargo.slotCount != bay.slots || design.cargo == null)
+                Issue(result, IssueLevel.Error, "cargo_packing", "Cargo packing is missing or belongs to a different bay.", "Repack and lock the cargo in the selected bay.");
+            else
+            {
+                var ids = new HashSet<string>(); var occupied = new HashSet<int>();
+                foreach (var item in cargo.items)
+                {
+                    if (item == null || string.IsNullOrWhiteSpace(item.id) || !ids.Add(item.id)) { Issue(result, IssueLevel.Error, "cargo_packing", "Cargo contains an invalid or duplicate item.", "Repack the cargo."); continue; }
+                    var definition = scenario.cargo == null ? null : scenario.cargo.FirstOrDefault(x => x != null && x.id == item.id);
+                    var selection = design.cargo.FirstOrDefault(x => x != null && x.cargoId == item.id);
+                    if (definition == null || definition.slots <= 0 || item.startSlot < 0 || item.startSlot >= cargo.slotCount || definition.slots > cargo.slotCount - item.startSlot || (cargo.slotCount == 6 && definition.slots == 2 && item.startSlot / 3 != (item.startSlot + 1) / 3))
+                    { Issue(result, IssueLevel.Error, "cargo_packing", "A cargo item does not fit in the bay.", "Repack the cargo using free adjacent slots."); continue; }
+                    if (selection == null || selection.startSlot != item.startSlot) Issue(result, IssueLevel.Error, "cargo_mismatch", "Packed cargo does not match the ship design.", "Update the selected cargo and packing together.");
+                    if (!item.locked) Issue(result, IssueLevel.Error, "cargo_unlocked", item.id + " is loose.", "Lock it before launch.");
+                    for (int i = item.startSlot; i < item.startSlot + definition.slots; i++) if (!occupied.Add(i)) Issue(result, IssueLevel.Error, "cargo_overlap", "Cargo items overlap.", "Move an item to free slots.");
+                }
+                if (design.cargo.Any(x => x == null || !ids.Contains(x.cargoId))) Issue(result, IssueLevel.Error, "cargo_mismatch", "The ship design includes cargo that is not packed.", "Pack and lock every selected item.");
+                if (!ids.Contains("panel") || !ids.Contains("kit")) Issue(result, IssueLevel.Error, "required_cargo", "The panel and insulated repair kit are required.", "Pack and lock both required items.");
+            }
+            if (result.payloadMarginKg >= 0 && result.payloadMarginKg <= LowMassMarginKg && result.launchCapacityKg > 0)
+                Issue(result, IssueLevel.Warning, "mass_margin", "Only " + result.payloadMarginKg + " kg of launch capacity remains.", "Recheck the total before adding cargo.");
+            return result;
+        }
+    }
+}
