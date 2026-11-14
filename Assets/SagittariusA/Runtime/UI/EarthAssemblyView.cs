@@ -88,7 +88,7 @@ namespace SagittariusA.Gameplay.UI
             ActionButton(transform, "ZOOM IN", .519f, .635f, .105f, .035f, () => Zoom(1));
             ActionButton(transform, "ZOOM OUT", .626f, .635f, .105f, .035f, () => Zoom(-1));
             Label(transform, "Click a part to swap instantly · Drag to rotate · Scroll to zoom", .30f, .105f, .44f, .045f, 17, Color.white);
-            Label(transform, "PROTOTYPE SHAPES / EXPLODED VIEW", .30f, .065f, .44f, .035f, 15, new Color(.65f, .72f, .8f));
+            Label(transform, "INTERACTIVE 3D PARTS / EXPLODED VIEW", .30f, .065f, .44f, .035f, 15, new Color(.65f, .72f, .8f));
             var dash = Box(transform, "Fitted ship totals", .755f, .16f, .22f, .52f, new Color(.055f, .07f, .10f));
             Label(dash, "FITTED SHIP / LIVE TOTALS", .06f, .87f, .88f, .09f, 20, Accent);
             totals = Label(dash, "", .06f, .40f, .88f, .46f, 22, Color.white);
@@ -179,7 +179,7 @@ namespace SagittariusA.Gameplay.UI
             var a = session.Assessment;
             totals.text = $"Cost  {Money(a.costUsd)} / {Money(session.Catalog.budgetUsd)}\n\nMass  {a.massKg:N0} kg\nCapacity  {a.payloadKg:N0} kg\nMargin  {a.MassMarginKg:N0} kg\n\nCargo  {a.slotsUsed} / {a.slotsAvailable}\nPower  {session.Catalog.busPowerKw} / {a.supplyKw} kW\nBattery  {a.batteryKwh} kWh\nFuel  {a.fuelUnits} units";
             var hardware = a.issues.FirstOrDefault(x => x.code != "cargo-check" && x.code != "power-check" && x.code != "landing-check");
-            feedback.text = hardware != null ? hardware.message : "Hardware ready.\n\nContinue to Review Launch for cargo, power and landing checks.";
+            feedback.text = hardware != null ? hardware.message : "Hardware ready.\n\nSecure cargo before launch. Power and landing checks happen in flight.";
             feedback.color = hardware?.blocksLaunch == true ? new Color(1, .45f, .35f) : Color.white;
             RebuildShip(build);
             if (focusName != null && EventSystem.current != null)
@@ -202,7 +202,19 @@ namespace SagittariusA.Gameplay.UI
                     // Cargo is only staged here; packing/locking stays with the cargo minigame.
                     int count = Math.Max(1, build.cargo.Count);
                     for (int j = 0; j < count; j++)
-                        Primitive(socket.transform, PrimitiveType.Cube, new Vector3((j % 2) * .62f - .3f, (j / 2) * .62f, 0), Vector3.one * .52f, i);
+                    {
+                        var position = new Vector3((j % 2) * .78f - .39f, (j / 2) * .78f, 0);
+                        var id = j < build.cargo.Count ? build.cargo[j] : null;
+                        var cargoPrefab = id == null ? null : Resources.Load<GameObject>("EarthParts/" + id);
+                        if (cargoPrefab == null) Primitive(socket.transform, PrimitiveType.Cube, position, Vector3.one * .52f, i);
+                        else
+                        {
+                            var holder = new GameObject(id + " staged cargo");
+                            holder.transform.SetParent(socket.transform, false); holder.transform.localPosition = position;
+                            var visual = Instantiate(cargoPrefab, holder.transform, false);
+                            AddArtworkTarget(holder.transform, visual, i);
+                        }
+                    }
                     continue;
                 }
                 var part = session.Catalog.Group(i).First(x => x.id == build.parts[i]);
@@ -211,10 +223,7 @@ namespace SagittariusA.Gameplay.UI
                 if (prefab != null)
                 {
                     var visual = Instantiate(prefab, socket.transform, false);
-                    foreach (Transform child in visual.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = 31;
-                    // Dedicated click target keeps artistic collider choices out of assembly interaction.
-                    var target = socket.AddComponent<BoxCollider>(); target.size = Vector3.one * 1.7f;
-                    sockets.Add((target, i));
+                    AddArtworkTarget(socket.transform, visual, i);
                     continue;
                 }
                 float variant = Array.FindIndex(session.Catalog.Group(i), x => x.id == part.id);
@@ -230,6 +239,25 @@ namespace SagittariusA.Gameplay.UI
                         Primitive(socket.transform, PrimitiveType.Cube, new Vector3(.8f, 0, 0), new Vector3(.8f, 1.5f + variant * .2f, .12f), i); break;
                 }
             }
+        }
+        private void AddArtworkTarget(Transform root, GameObject visual, int socket)
+        {
+            foreach (Transform child in visual.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = 31;
+            var renderers = visual.GetComponentsInChildren<Renderer>(true);
+            var target = root.gameObject.AddComponent<BoxCollider>();
+            if (renderers.Length > 0)
+            {
+                var bounds = renderers[0].bounds;
+                for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+                target.center = root.InverseTransformPoint(bounds.center);
+                var worldSize = bounds.size;
+                target.size = new Vector3(
+                    Mathf.Max(.35f, worldSize.x / Mathf.Max(.001f, root.lossyScale.x)),
+                    Mathf.Max(.35f, worldSize.y / Mathf.Max(.001f, root.lossyScale.y)),
+                    Mathf.Max(.35f, worldSize.z / Mathf.Max(.001f, root.lossyScale.z)));
+            }
+            else target.size = Vector3.one;
+            sockets.Add((target, socket));
         }
         private void Primitive(Transform parent, PrimitiveType type, Vector3 position, Vector3 scale, int socket)
         {
