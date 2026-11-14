@@ -57,12 +57,42 @@ namespace MissionSimulation.FarSignal
         public EarthDesign designSnapshot;
         public string nextMissionId;
     }
+    public enum LandingFuelOutcome { InvalidInput, SufficientFuel, InsufficientFuel }
+    [Serializable] public class LandingFuelResult
+    {
+        public LandingFuelOutcome outcome;
+        public string explanation;
+        // The game controller owns the actual failure screen and restart action.
+        public bool restartRequired;
+        public float availableFuelUnits, requiredFuelUnits;
+    }
 
     // Pure C#: no Unity, scene, UI, filesystem or global-state dependencies.
     public sealed class EarthLaunchSimulator
     {
         static void Add(LaunchReport r, IssueLevel level, string code, string text, string fix) { r.issues.Add(new Issue(level, code, text, fix)); }
         static bool ValidNumber(float n) { return !float.IsNaN(n) && !float.IsInfinity(n) && n >= 0; }
+        // Call at the landing decision using the current remaining fuel, not the original launch fuel.
+        public LandingFuelResult CheckLandingFuel(EarthScenario s, string landingPadId, float remainingFuelUnits)
+        {
+            var result = new LandingFuelResult { outcome = LandingFuelOutcome.InvalidInput };
+            if (!ValidScenario(s) || !ValidNumber(remainingFuelUnits) || string.IsNullOrWhiteSpace(landingPadId))
+            { result.explanation = "Landing fuel or mission data is invalid."; return result; }
+            var pad = s.landingMap.FirstOrDefault(x => x.id == landingPadId);
+            if (pad == null) { result.explanation = "Choose a valid landing pad."; return result; }
+            result.availableFuelUnits = remainingFuelUnits; result.requiredFuelUnits = pad.fuelUnits;
+            if (remainingFuelUnits < pad.fuelUnits)
+            {
+                result.outcome = LandingFuelOutcome.InsufficientFuel; result.restartRequired = true;
+                result.explanation = "Not enough fuel for the selected landing pad. The mission fails and must be restarted.";
+            }
+            else
+            {
+                result.outcome = LandingFuelOutcome.SufficientFuel;
+                result.explanation = "Fuel is sufficient for the selected landing pad.";
+            }
+            return result;
+        }
         static bool ValidIds<T>(T[] items, Func<T, string> id) where T : class
         {
             if (items == null || items.Length == 0) return false;
@@ -148,7 +178,7 @@ namespace MissionSimulation.FarSignal
             if (p.maxPowerKw < s.busPowerKw) Add(r, IssueLevel.Error, "essential_power", "The power system cannot support the ship's essential load.", "Choose a stronger power system.");
             if (p.batteryKwh < s.minimumBatteryKwh) Add(r, IssueLevel.Error, "battery", "Battery capacity is below the mission minimum.", "Choose a power system with a larger battery.");
             if (r.fuelUnits < s.minimumFuelUnits) Add(r, IssueLevel.Error, "fuel", "Fuel is below the minimum for launch.", "Choose a different engine or carry extra fuel.");
-            if (r.fuelUnits < pad.fuelUnits) Add(r, IssueLevel.Warning, "landing_fuel", "The selected pad needs more fuel than is available.", "Add fuel, change engine, or plan the other pad.");
+            if (r.fuelUnits < pad.fuelUnits) Add(r, IssueLevel.Warning, "landing_fuel", "The selected pad needs more fuel than is currently available; attempting to land without enough fuel fails the mission.", "Add fuel, change engine, or plan the other pad.");
             r.laserPowered = selected.Contains("laser") && r.requiredPowerKw <= r.availablePowerKw;
             if (r.requiredPowerKw > r.availablePowerKw && p.maxPowerKw >= s.busPowerKw) Add(r, IssueLevel.Warning, "optional_power", "Optional equipment exceeds available power; the laser remains off.", "Choose a stronger power system or use hand tools.");
             return r;

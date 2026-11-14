@@ -93,5 +93,23 @@ namespace MissionSimulation.Tests
             scenario.busCostUsd = long.MaxValue;
             Assert.IsTrue(simulator.Validate(scenario,design).issues.Any(x => x.code == "scenario"));
         }
+        [Test] public void InsufficientLandingFuelRequiresRestart()
+        {
+            var result = simulator.CheckLandingFuel(scenario, "ridge", 12);
+            Assert.AreEqual(LandingFuelOutcome.InsufficientFuel, result.outcome);
+            Assert.IsTrue(result.restartRequired);
+        }
+        [Test] public void ExactLandingFuelIsSufficient()
+        {
+            var result = simulator.CheckLandingFuel(scenario, "ridge", 13);
+            Assert.AreEqual(LandingFuelOutcome.SufficientFuel, result.outcome);
+            Assert.IsFalse(result.restartRequired);
+        }
+        [Test] public void InvalidFuelOrPadDoesNotPretendMissionFailed()
+        {
+            Assert.AreEqual(LandingFuelOutcome.InvalidInput, simulator.CheckLandingFuel(scenario, "ridge", float.NaN).outcome);
+            var result = simulator.CheckLandingFuel(scenario, "unknown", 12);
+            Assert.AreEqual(LandingFuelOutcome.InvalidInput, result.outcome); Assert.IsFalse(result.restartRequired);
+        }
     }
 }

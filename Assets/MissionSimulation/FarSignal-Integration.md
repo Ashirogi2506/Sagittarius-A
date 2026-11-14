@@ -19,6 +19,9 @@ LaunchReport report = new EarthLaunchSimulator().Validate(mission, design);
 LaunchResult result = new EarthLaunchSimulator().Evaluate(mission, design);
 // Show result.summary and result.report. Only if launch succeeds in the game,
 // save result.designSnapshot and result.nextMissionId for the next chapter.
+// At the actual landing decision, pass the current fuel and pad, which can change in flight:
+LandingFuelResult landing = new EarthLaunchSimulator().CheckLandingFuel(mission, "ridge", 12f);
+// If landing.restartRequired, the game controller shows failure and restarts the game.
 ```
 
 Cargo slots are zero-based. Each item occupies a contiguous run starting at `startSlot`, so the panel occupies two adjacent slots. Total payload includes the ship bus, engine, cargo bay, power system and cargo. Effective capacity is launcher payload plus nozzle gain minus cover loss. Fuel and nozzle/fairing effects are the team's abstract gameplay values, not certified specifications. The optional laser is disabled if its load exceeds the selected power system while the essential bus load is still met. A planned landing pad with insufficient fuel is a warning, since the player can change the plan later.
@@ -27,4 +30,6 @@ Cargo slots are zero-based. Each item occupies a contiguous run starting at `sta
 
 Missing mission or design data produces a blocking issue. The validator rejects missing lists, null entries, duplicate or blank IDs, invalid numeric values and cost overflow; malformed data should be corrected by the scenario owner. Selectors and cargo IDs are exact and case-sensitive. A report that is blocked may contain partial resource totals and should not be treated as a launchable design.
 
-The source draft does not define cargo lock state, cabin/radio checks, exact landing timing, flight duration, flight events, carryover persistence, scores, or a rule for whether all fuel may be spent on landing. Those interactions need agreement with their respective owners; this report is a launch design preview, not a full mission result. No dialogue or visual assets are changed. Values and narrative remain under the scenario owner's review.
+The user confirmed that insufficient fuel for the landing pad causes mission failure and a restart, and that a manual opening option is needed when the laser cannot be used. `CheckLandingFuel` signals failure to the game controller without deciding the timing or resetting state itself. Fuel sufficiency alone does not guarantee a successful landing. For the manual route, UI/gameplay must offer the opening interaction; `laserPowered` reports whether the laser is usable during the launch configuration, but the gameplay owner must determine its state later in the mission.
+
+The source draft does not define cargo lock state, cabin/radio checks, exact landing timing, flight fuel consumption, flight events, carryover persistence, scores, or the manual opening interaction. Those interactions need agreement with their respective owners; this report is a launch design preview, not a full mission result. No dialogue or visual assets are changed. Values and narrative remain under the scenario owner's review.
