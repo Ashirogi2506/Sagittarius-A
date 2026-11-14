@@ -80,8 +80,10 @@ namespace SagittariusA.Gameplay.Editor
             CreateScreen(flowRoot.transform, GameScreen.Simulation, "MISSION SIMULATION", "The 3D mission visualization and simulation status will appear here.", "View Results", GameScreen.Results, null, GameScreen.Simulation);
             CreateScreen(flowRoot.transform, GameScreen.Results, "POST-MISSION REPORT", "Success, score breakdown, scientific results, and explanations will appear here.", "Retry Configuration", GameScreen.Configuration, "Mission Selection", GameScreen.MissionSelection);
 
-            GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+            GameObject eventSystem = new GameObject("EventSystem", typeof(EventSystem));
             eventSystem.transform.SetParent(root.transform, false);
+            InputSystemUIInputModule inputModule = eventSystem.AddComponent<InputSystemUIInputModule>();
+            inputModule.AssignDefaultActions();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);

@@ -23,29 +23,43 @@ namespace SagittariusA.Gameplay.UI
             Button configuredSecondaryButton,
             GameScreen configuredSecondaryTarget)
         {
+            UnbindButtons();
             screen = configuredScreen;
             primaryButton = configuredPrimaryButton;
             primaryTarget = configuredPrimaryTarget;
             secondaryButton = configuredSecondaryButton;
             secondaryTarget = configuredSecondaryTarget;
+
+            if (flow == null)
+            {
+                flow = GetComponentInParent<GameFlowController>();
+            }
+
+            BindButtons();
         }
 
         private void Awake()
         {
             flow = GetComponentInParent<GameFlowController>();
+            BindButtons();
+        }
 
+        private void BindButtons()
+        {
             if (primaryButton != null)
             {
+                primaryButton.onClick.RemoveListener(ShowPrimaryTarget);
                 primaryButton.onClick.AddListener(ShowPrimaryTarget);
             }
 
             if (secondaryButton != null)
             {
+                secondaryButton.onClick.RemoveListener(ShowSecondaryTarget);
                 secondaryButton.onClick.AddListener(ShowSecondaryTarget);
             }
         }
 
-        private void OnDestroy()
+        private void UnbindButtons()
         {
             if (primaryButton != null)
             {
@@ -56,6 +70,11 @@ namespace SagittariusA.Gameplay.UI
             {
                 secondaryButton.onClick.RemoveListener(ShowSecondaryTarget);
             }
+        }
+
+        private void OnDestroy()
+        {
+            UnbindButtons();
         }
 
         private void ShowPrimaryTarget()
