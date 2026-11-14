@@ -46,7 +46,7 @@ namespace SagittariusA.Gameplay.UI
         {
             Label(transform, "FAR SIGNAL  /  EARTH  /  THE MOON CALL", .03f, .92f, .94f, .045f, 18, Orange);
             string title = screen == GameScreen.Review ? "LAUNCH CHECKLIST" :
-                screen == GameScreen.Simulation ? "LAUNCH AUTHORIZED" : screen == GameScreen.Results ? "EARTH FLIGHT LOG" : "MOON — POLE-7 ARRIVAL";
+                screen == GameScreen.Simulation ? "LAUNCH AUTHORIZED" : screen == GameScreen.Results ? "IN-FLIGHT CHECKS" : "MOON — POLE-7 ARRIVAL";
             Label(transform, title, .03f, .84f, .94f, .075f, 38, Color.white);
             subtitle = Label(transform, "Commander " + PlayerPrefs.GetString("FarSignal.CommanderName", "Alex"), .03f, .79f, .94f, .045f, 19, Muted);
             body = Box(transform, "Content", .03f, .14f, .94f, .63f, Color.clear);
@@ -60,8 +60,7 @@ namespace SagittariusA.Gameplay.UI
             else if (screen == GameScreen.Simulation) flow.Show(GameScreen.Results);
             else if (screen == GameScreen.Results)
             {
-                if (session.TransitCompleted) flow.Show(GameScreen.MoonArrival);
-                else session.BeginActivity(EarthActivity.Transit);
+                if (session.FlightChecksCompleted) flow.Show(GameScreen.MoonArrival);
             }
             else flow.Show(GameScreen.Results);
         }
@@ -77,9 +76,9 @@ namespace SagittariusA.Gameplay.UI
             RenderReport(a);
             primary.GetComponentInChildren<Text>().text = screen == GameScreen.Review ? (session.Launched ? "VIEW LAUNCH" : "LAUNCH") :
                 screen == GameScreen.Simulation ? "VIEW FLIGHT LOG" : screen == GameScreen.Results ?
-                (session.TransitCompleted ? "MOON ARRIVAL" : "START TRANSIT") : "EARTH LOG";
-            primary.interactable = !session.Busy && (screen != GameScreen.Review || a.CanLaunch) &&
-                (screen != GameScreen.Results || session.TransitCompleted || session.CanRun(EarthActivity.Transit));
+                (session.FlightChecksCompleted ? "MOON ARRIVAL" : "COMPLETE FLIGHT CHECKS") : "EARTH LOG";
+            primary.interactable = !session.Busy && (screen != GameScreen.Review || session.CanLaunchFromEarth) &&
+                (screen != GameScreen.Results || session.FlightChecksCompleted);
             if (EventSystem.current != null && (selectedName != null || selected == null || !selected.activeInHierarchy))
             {
                 var buttons = GetComponentsInChildren<Button>().Where(b => b.interactable).ToArray();
@@ -101,30 +100,37 @@ namespace SagittariusA.Gameplay.UI
             var right = Box(body, "Checks", .48f, 0, .52f, 1, Card);
             if (screen == GameScreen.Review)
             {
-                Label(right, a.CanLaunch ? "READY TO LAUNCH" : "LAUNCH ON HOLD", .05f, .90f, .9f, .07f, 24, a.CanLaunch ? Green : Red);
-                Issues(right, a, .04f, .37f, .92f, .50f);
-                string[] labels = { "PACK & LOCK CARGO", "TEST POWER", "PLAN LANDING" };
-                for (int i = 0; i < 3; i++)
-                {
-                    var activity = (EarthActivity)i; bool available = session.CanRun(activity);
-                    var button = ActionButton(right, labels[i] + (available ? "" : " · MODULE PENDING"), .05f, .25f - .10f * i, .9f, .085f, () => session.BeginActivity(activity));
-                    button.interactable = available;
-                }
+                bool ready = session.CanLaunchFromEarth;
+                Label(right, ready ? "READY TO LAUNCH" : "LAUNCH ON HOLD", .05f, .90f, .9f, .07f, 24, ready ? Green : Red);
+                Issues(right, a, .04f, .39f, .92f, .48f, issue => !IsInFlightIssue(issue));
+                Label(right, "Power and landing checks happen after launch, while flying.", .05f, .27f, .9f, .09f, 18, Muted);
+                bool available = session.CanRun(EarthActivity.Cargo);
+                var button = ActionButton(right, "PACK & LOCK CARGO" + (available ? "" : " · MODULE PENDING"), .05f, .13f, .9f, .09f, () => session.BeginActivity(EarthActivity.Cargo));
+                button.interactable = available;
             }
             else if (screen == GameScreen.MoonArrival)
             {
-                Label(right, "TRANSIT COMPLETE", .06f, .79f, .88f, .12f, 28, Green);
+                Label(right, "FLIGHT PHASE COMPLETE", .06f, .79f, .88f, .12f, 28, Green);
                 Label(right, "Khulan's map is ready.\n\nConfirm the landing plan before descent.\n\nMoon arrival is waiting for the team's playable scene. Your ship manifest and checks are preserved.", .06f, .15f, .88f, .60f, 24, Color.white);
+            }
+            else if (screen == GameScreen.Results)
+            {
+                Label(right, session.FlightChecksCompleted ? "FLIGHT CHECKS COMPLETE" : "EARTH ORBIT / MOON TRANSIT", .05f, .90f, .9f, .07f, 24, session.FlightChecksCompleted ? Green : Orange);
+                Issues(right, a, .04f, .39f, .92f, .48f, IsInFlightIssue);
+                var power = ActionButton(right, "TEST POWER", .05f, .25f, .9f, .09f, () => session.BeginActivity(EarthActivity.Power));
+                power.interactable = session.CanRun(EarthActivity.Power);
+                var landing = ActionButton(right, "PLAN LANDING", .05f, .13f, .9f, .09f, () => session.BeginActivity(EarthActivity.Landing));
+                landing.interactable = session.CanRun(EarthActivity.Landing);
             }
             else
             {
                 Label(right, session.Launched ? "EARTH LAUNCH RECORDED" : "LAUNCH NOT COMPLETED", .06f, .79f, .88f, .12f, 26, session.Launched ? Green : Red);
                 Label(right, "Commander " + PlayerPrefs.GetString("FarSignal.CommanderName", "Alex") +
-                    (session.Launched ? ", your validated manifest is saved.\n\nNext: cabin transit, then Moon arrival.\n\n" : ", complete all launch checks first.\n\n") +
-                    (session.TransitCompleted ? "Transit complete. Open Moon arrival." : session.CanRun(EarthActivity.Transit) ? "The transit module is connected." : "The transit minigame is awaiting the teammate's module."), .06f, .15f, .88f, .60f, 24, Color.white);
+                    (session.Launched ? ", your launch manifest is saved.\n\nContinue to the in-flight power and landing checks." : ", secure the cargo and resolve any hardware holds first."), .06f, .15f, .88f, .60f, 24, Color.white);
             }
         }
-        private void Issues(Transform parent, EarthAssessment a, float x, float y, float w, float h)
+        private static bool IsInFlightIssue(EarthIssue issue) => issue.code == "power-check" || issue.code == "landing-check";
+        private void Issues(Transform parent, EarthAssessment a, float x, float y, float w, float h, Func<EarthIssue, bool> filter = null)
         {
             var viewport = Box(parent, "CheckScroll", x, y, w, h, new Color(.035f, .045f, .065f));
             viewport.gameObject.AddComponent<RectMask2D>();
@@ -136,15 +142,20 @@ namespace SagittariusA.Gameplay.UI
             content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             var scroll = viewport.gameObject.AddComponent<ScrollRect>(); scroll.viewport = viewport; scroll.content = content;
             scroll.horizontal = false; scroll.scrollSensitivity = 32; scroll.movementType = ScrollRect.MovementType.Clamped;
-            if (a.issues.Count == 0)
+            var issues = filter == null ? a.issues.ToArray() : a.issues.Where(filter).ToArray();
+            if (issues.Length == 0)
             {
                 var text = Label(content, "[READY] All checks passed.", 0, 0, 1, 1, 20, Green);
                 text.gameObject.AddComponent<LayoutElement>().preferredHeight = 60;
             }
-            foreach (var issue in a.issues)
+            foreach (var issue in issues)
             {
                 var button = ActionButton(content, (issue.blocksLaunch ? "[HOLD] " : "[NOTE] ") + issue.message, 0, 0, 1, 1,
-                    () => { flow.Show(GameScreen.Configuration); flow.GetComponentInChildren<EarthAssemblyView>(true).SelectCategory(issue.category); });
+                    () => {
+                        if (issue.code == "power-check") session.BeginActivity(EarthActivity.Power);
+                        else if (issue.code == "landing-check") session.BeginActivity(EarthActivity.Landing);
+                        else { flow.Show(GameScreen.Configuration); flow.GetComponentInChildren<EarthAssemblyView>(true).SelectCategory(issue.category); }
+                    });
                 var label = button.GetComponentInChildren<Text>(); label.fontSize = 19; label.alignment = TextAnchor.MiddleLeft; label.color = issue.blocksLaunch ? Red : Orange;
                 button.gameObject.AddComponent<LayoutElement>().preferredHeight = screen == GameScreen.Configuration ? 105 : 85;
             }

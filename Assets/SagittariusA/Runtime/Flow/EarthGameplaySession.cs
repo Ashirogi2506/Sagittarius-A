@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace SagittariusA.Gameplay.Flow
 {
-    public enum EarthActivity { Cargo, Power, Landing, Transit }
+    public enum EarthActivity { Cargo, Power, Landing }
     [Serializable] public sealed class EarthMinigameContext
     {
         public string runId, missionId, commanderId, playerName;
@@ -22,11 +22,10 @@ namespace SagittariusA.Gameplay.Flow
         public EarthActivity activity;
         public bool completed;
         public EarthChecks checks;
-        public string switchedOffDeviceId;
     }
     [Serializable] public sealed class EarthMoonHandoff
     {
-        public string missionId, commanderId, playerName, switchedOffDeviceId;
+        public string missionId, commanderId, playerName;
         public EarthBuild build;
         public EarthChecks checks;
         public int fuelUnits, batteryKwh, supplyKw, launchCostUsd, launchMassMarginKg;
@@ -47,7 +46,6 @@ namespace SagittariusA.Gameplay.Flow
         public EarthBuild build = new EarthBuild();
         public EarthChecks checks = new EarthChecks();
         public bool launched, transitCompleted;
-        public string switchedOffDeviceId;
     }
     public interface IEarthDraftStore
     {
@@ -72,9 +70,11 @@ namespace SagittariusA.Gameplay.Flow
         public EarthBuild Build => Clone(draft.build);
         public EarthChecks Checks => Clone(draft.checks);
         public bool Launched => draft.launched;
-        public bool TransitCompleted => draft.transitCompleted;
+        public bool FlightChecksCompleted => draft.transitCompleted;
         public bool Busy => activeRun != null;
         public EarthAssessment Assessment => simulator.Assess(Catalog, draft.build, draft.checks);
+        // Power and landing are intentionally completed after launch. They do not hold the rocket on Earth.
+        public bool CanLaunchFromEarth => Assessment.issues.All(issue => !issue.blocksLaunch || IsInFlightIssue(issue.code));
         public event Action Changed;
         public event Action<EarthMoonHandoff> MoonStageRequested;
         public string Notice { get; private set; }
@@ -111,19 +111,20 @@ namespace SagittariusA.Gameplay.Flow
         }
         public EarthMoonHandoff GetMoonHandoff()
         {
-            if (!TransitCompleted) return null;
+            if (!FlightChecksCompleted) return null;
             var a = Assessment;
             return new EarthMoonHandoff {
                 missionId = Catalog.nextMissionId,
                 commanderId = PlayerPrefs.GetString("FarSignal.CommanderId", "commander_male"),
                 playerName = PlayerPrefs.GetString("FarSignal.CommanderName", "Alex"),
-                switchedOffDeviceId = draft.switchedOffDeviceId, build = Build, checks = Checks,
+                build = Build, checks = Checks,
                 fuelUnits = a.fuelUnits, batteryKwh = a.batteryKwh, supplyKw = a.supplyKw,
                 launchCostUsd = a.costUsd, launchMassMarginKg = a.MassMarginKg
             };
         }
+        private static bool IsInFlightIssue(string code) => code == "power-check" || code == "landing-check";
         public bool CanRun(EarthActivity activity) => !Busy && runner != null && runner.Supports(activity) &&
-            (activity == EarthActivity.Transit ? Launched && !TransitCompleted : !Launched);
+            (activity == EarthActivity.Cargo ? !Launched : Launched && !FlightChecksCompleted);
         public void SelectPart(int group, string id)
         {
             if (Busy || Launched || group < 0 || group > 5 || !Catalog.Group(group).Any(p => p.id == id) || draft.build.parts[group] == id) return;
@@ -191,7 +192,7 @@ namespace SagittariusA.Gameplay.Flow
             activeRun = null;
             if (!result.completed) { Notice = "Activity cancelled. Your design is preserved."; Changed?.Invoke(); return; }
             var candidate = Checks;
-            if (result.activity != EarthActivity.Transit && result.checks == null)
+            if (result.checks == null)
             { Notice = "Activity returned no check data. Retry the activity."; Changed?.Invoke(); return; }
             switch (result.activity)
             {
@@ -201,24 +202,28 @@ namespace SagittariusA.Gameplay.Flow
                     candidate.cabinOn = result.checks.cabinOn; candidate.radioOn = result.checks.radioOn; candidate.laserTested = result.checks.laserTested;
                     break;
                 case EarthActivity.Landing: candidate.padId = result.checks.padId; candidate.arrivalMinute = result.checks.arrivalMinute; break;
-                case EarthActivity.Transit:
-                    if (result.switchedOffDeviceId != "work-light" && result.switchedOffDeviceId != "cargo-camera")
-                    { Notice = "Transit choice is missing. Retry transit."; Changed?.Invoke(); return; }
-                    draft.transitCompleted = true; draft.switchedOffDeviceId = result.switchedOffDeviceId;
-                    Notice = "Transit complete. Preparing Moon arrival."; Save();
-                    GetComponent<GameFlowController>()?.Show(GameScreen.MoonArrival);
-                    MoonStageRequested?.Invoke(GetMoonHandoff()); return;
             }
             string checkCode = result.activity == EarthActivity.Cargo ? "cargo-check" : result.activity == EarthActivity.Power ? "power-check" : "landing-check";
             if (simulator.Assess(Catalog, draft.build, candidate).issues.Any(x => x.code == checkCode))
             { Notice = "The returned check is incomplete. Retry the activity."; Changed?.Invoke(); return; }
-            draft.checks = candidate; Notice = "Check completed and saved."; Save();
+            draft.checks = candidate;
+            if (draft.launched && !simulator.Assess(Catalog, draft.build, draft.checks).issues.Any(issue => IsInFlightIssue(issue.code)))
+            {
+                draft.transitCompleted = true;
+                Notice = "In-flight checks complete. Preparing Moon arrival."; Save();
+                GetComponent<GameFlowController>()?.Show(GameScreen.MoonArrival);
+                MoonStageRequested?.Invoke(GetMoonHandoff()); return;
+            }
+            Notice = result.activity == EarthActivity.Cargo ? "Cargo secured. Launch check saved." : "In-flight check completed and saved.";
+            Save();
         }
         public bool TryLaunch()
         {
-            if (Busy || !Assessment.CanLaunch) return false;
+            if (Busy || !CanLaunchFromEarth) return false;
             if (draft.launched) return true;
-            draft.launched = true; Notice = "Launch authorized. Manifest saved."; Save(); return true;
+            // Old drafts may contain pre-launch power/landing results. Clear them so these checks really occur in flight.
+            ClearPower(); draft.checks.padId = null; draft.checks.arrivalMinute = 0;
+            draft.launched = true; Notice = "Launch authorized. Begin in-flight power and landing checks."; Save(); return true;
         }
         private void OnApplicationPause(bool paused)
         { if (!Busy || runner == null) return; if (paused) runner.Pause(); else runner.Resume(); }

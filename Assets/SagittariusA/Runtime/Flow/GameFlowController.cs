@@ -57,7 +57,7 @@ namespace SagittariusA.Gameplay.Flow
             var session = GetComponent<EarthGameplaySession>();
             if (screen == GameScreen.Simulation && !session.TryLaunch()) return false;
             if (screen == GameScreen.Results && !session.Launched) return false;
-            if (screen == GameScreen.MoonArrival && !session.TransitCompleted) return false;
+            if (screen == GameScreen.MoonArrival && !session.FlightChecksCompleted) return false;
 
             GameScreen previous = CurrentScreen;
 
@@ -484,7 +484,7 @@ namespace SagittariusA.Gameplay.Flow
             resume.onClick.AddListener(() => {
                 var flow = parent.GetComponentInParent<GameFlowController>();
                 var session = flow.GetComponent<EarthGameplaySession>();
-                flow.Show(session.TransitCompleted ? GameScreen.MoonArrival : session.Launched ? GameScreen.Results : GameScreen.Configuration);
+                flow.Show(session.FlightChecksCompleted ? GameScreen.MoonArrival : session.Launched ? GameScreen.Results : GameScreen.Configuration);
             });
             CreateMenuItem(panel.transform, "MISSION ARCHIVE", 0.43f);
             CreateMenuItem(panel.transform, "SETTINGS", 0.36f);

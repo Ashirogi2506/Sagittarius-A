@@ -17,7 +17,7 @@ These are assembled hardware configurations, not completed mission checks. All i
 
 EarthReadyBuild defines stable IDs and returns independent loadout copies. EarthGameplaySession.LoadReadyBuild saves the selection and clears previous checks when the loadout changes. Selecting the already-fitted model leaves its checks intact. Customizing a model changes its label to Custom Build. No save migration is necessary: model identity is inferred from the saved parts and cargo.
 
-Review Launch still requires cargo locks, a power test and a landing plan. The old overweight demo remains available only as a developer test fixture; it is not offered as a ready-made ship.
+Review Launch requires valid hardware and locked cargo. Power testing and landing planning happen after launch on the in-flight screen. The old overweight demo remains available only as a developer test fixture; it is not offered as a ready-made ship.
 
 ## Controls and state
 
@@ -29,6 +29,6 @@ The model reads the same EarthGameplaySession used by validation and reports. Bu
 
 Each hardware/cargo entry supports an optional plain-text description in Resources/FarSignalEarth.json. INFO uses that text; missing content says Description coming soon. Copy is still awaiting the user's files.
 
-Shapes are temporary blockout art. Hardware prefabs can replace them at Resources/EarthParts/<partId>.prefab. Use a local attachment origin, upright +Y, neutral local transform and materials matching the active rendering pipeline. Visual prefabs should have no scripts, cameras or lights. Tune the schematic attachment positions and click target bounds when the final models arrive.
+Shapes remain as fallback blockout art. The supplied 30 Blender models are preserved in SourceArt/EarthRocketParts with their Parts-Index.csv mapping. They remain outside Assets because this workstation does not currently have Blender, which Unity requires to import `.blend` files. Export them to FBX, then create prefabs at Resources/EarthParts/<partId>.prefab. Use a local attachment origin, upright +Y, neutral local transform and materials matching the active rendering pipeline. Visual prefabs should have no scripts, cameras or lights. Tune the schematic attachment positions and click target bounds after conversion.
 
 The preview uses layer 31, an isolated studio at x=10000, a RenderTexture and a camera. Reserve layer 31 for this view. Generated objects, texture and materials are released with the screen. A standalone build needs the preview shader/material included in build assets and its own visual test; current verification is Editor Play Mode.

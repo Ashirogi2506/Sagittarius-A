@@ -38,8 +38,7 @@ namespace SagittariusA.Gameplay.Editor
                     },
                     powerTestCompleted = true, cabinOn = true, radioOn = true,
                     padId = "main", arrivalMinute = 1
-                },
-                switchedOffDeviceId = "work-light"
+                }
             };
         }
 
@@ -60,7 +59,7 @@ namespace SagittariusA.Gameplay.Editor
             {
                 var store = new MemoryStore();
                 var s = Create(store);
-                Check(!s.TryLaunch(), "Unchecked build must not launch.");
+                Check(!s.TryLaunch(), "Unsecured cargo must not launch.");
                 s.LoadReadyBuild("cargo");
                 Check(s.Assessment.slotsAvailable == 6 && !s.Assessment.CanLaunch,
                     "Ready model loads instantly but preserves required launch checks.");
@@ -103,29 +102,29 @@ namespace SagittariusA.Gameplay.Editor
                 s.SelectPart(4, "c2");
                 Check(s.Checks.placements.Count == 0, "Bay changes must clear cargo checks.");
                 s.LoadPreset(0);
-                foreach (var activity in new[] { EarthActivity.Cargo, EarthActivity.Power, EarthActivity.Landing })
-                { s.BeginActivity(activity); runner.Callback(runner.Result()); }
-                Check(s.Assessment.CanLaunch, "Three valid checks must allow launch.");
-                s.SelectPart(5, "p2");
-                Check(!s.Checks.powerTestCompleted && !s.Assessment.CanLaunch, "Power change must invalidate its test.");
-                s.BeginActivity(EarthActivity.Power); runner.Callback(runner.Result());
-                Check(s.TryLaunch(), "Rechecked build must launch.");
+                Check(!s.CanRun(EarthActivity.Power) && !s.CanRun(EarthActivity.Landing),
+                    "Power and landing activities must not run before launch.");
+                s.BeginActivity(EarthActivity.Cargo); runner.Callback(runner.Result());
+                Check(s.CanLaunchFromEarth && !s.Assessment.CanLaunch,
+                    "Cargo and hardware must permit Earth launch while flight checks remain pending.");
+                Check(s.TryLaunch(), "Cargo-ready build must launch before flight checks.");
                 writes = store.Writes;
                 Check(s.TryLaunch() && store.Writes == writes, "Launch must commit once.");
+                Check(!s.CanRun(EarthActivity.Cargo) && s.CanRun(EarthActivity.Power) && s.CanRun(EarthActivity.Landing),
+                    "Only power and landing activities may run in flight.");
                 s.SelectPart(0, "l3");
                 Check(s.Build.parts[0] == "l1", "Launched build must be immutable.");
                 int handoffs = 0; EarthMoonHandoff handoff = null;
                 s.MoonStageRequested += value => { handoffs++; handoff = value; };
-                s.BeginActivity(EarthActivity.Transit);
-                var invalid = runner.Result(); invalid.switchedOffDeviceId = "radio"; runner.Callback(invalid);
-                Check(!s.TransitCompleted && handoffs == 0, "Turning off essential radio cannot complete transit.");
-                s.BeginActivity(EarthActivity.Transit);
-                var transit = runner.Result(); runner.Callback(transit); runner.Callback(transit);
+                s.BeginActivity(EarthActivity.Power); runner.Callback(runner.Result());
+                Check(!s.FlightChecksCompleted && handoffs == 0, "Power alone must not complete the flight phase.");
+                s.BeginActivity(EarthActivity.Landing);
+                var landing = runner.Result(); runner.Callback(landing); runner.Callback(landing);
                 Check(handoffs == 1 && handoff.missionId == "pole-7" && handoff.checks.padId == "main",
-                    "Transit must hand off once with saved plan.");
+                    "Both in-flight checks must hand off to the Moon once.");
                 var resumed = Create(store);
-                Check(resumed.GetMoonHandoff()?.switchedOffDeviceId == "work-light" && !resumed.CanRun(EarthActivity.Transit),
-                    "Completed transit must survive reload.");
+                Check(resumed.GetMoonHandoff()?.checks.padId == "main" && !resumed.CanRun(EarthActivity.Power),
+                    "Completed in-flight phase must survive reload.");
                 Debug.Log($"EARTH SESSION CHECKS: {count} passed. Player save unchanged.");
             }
             catch (Exception error) { Debug.LogError("EARTH SESSION CHECKS FAILED: " + error); }
