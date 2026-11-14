@@ -67,6 +67,17 @@ namespace SagittariusA.Gameplay.Editor
                 s.SelectPart(1, "n2");
                 Check(s.Assessment.MassMarginKg == 10, "N-2 must correct the build.");
                 s.LoadPreset(0);
+                EarthAssessment live = null;
+                s.Changed += () => live = s.Assessment;
+                s.SetCargo("fuel", true);
+                Check(live != null && live.costUsd == 96000000 && live.massKg == 10170,
+                    "Fitting cargo must publish updated cost and mass immediately.");
+                int fittingWrites = store.Writes;
+                s.SetCargo("fuel", true);
+                Check(store.Writes == fittingWrites && s.Build.cargo.Count(id => id == "fuel") == 1,
+                    "Repeated fitting must not remove or duplicate cargo.");
+                s.SetCargo("fuel", false);
+                Check(live.costUsd == 93000000 && live.massKg == 9570, "Removing cargo must restore live totals.");
                 var runner = new Runner(); s.RegisterMinigames(runner);
                 s.BeginActivity(EarthActivity.Cargo);
                 var cancelled = runner.Result();

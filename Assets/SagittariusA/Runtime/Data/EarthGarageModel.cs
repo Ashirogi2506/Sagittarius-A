@@ -6,7 +6,7 @@ namespace SagittariusA.Gameplay.Data
 {
     [Serializable] public sealed class EarthPart
     {
-        public string id, name, mount;
+        public string id, name, mount, description;
         public string[] nozzleMounts;
         public int costUsd, basePayloadKg, payloadGainKg, payloadLossKg, maxModuleSize;
         public int massKg, fuelUnits, freeLandingCorrections, size, slots;

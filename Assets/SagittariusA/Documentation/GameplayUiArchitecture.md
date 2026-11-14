@@ -10,6 +10,8 @@ Continue Expedition resumes the saved garage, Earth log after launch, or Moon ha
 
 The garage has six hardware categories (four choices each), six cargo items, live totals, repair guidance, and starter / laser / overweight presets. Red checks block launch; yellow checks remain visible. Cargo, power and landing checks require a registered minigame runner. Missing modules display MODULE PENDING and cannot grant completion.
 
+Open 3D Assembly provides a snap-fit blockout sharing the same session. Candidate browsing leaves totals unchanged; fitting or removing a part updates them before the next frame. INFO buttons open optional catalog descriptions in both views. See EarthAssembly.md for controls, description fields and art integration.
+
 ## Ownership
 
 - EarthGarageView displays and edits selections; it does not calculate ship limits.

@@ -48,6 +48,9 @@ namespace SagittariusA.Gameplay.UI
             string title = screen == GameScreen.Configuration ? "SHIP GARAGE" : screen == GameScreen.Review ? "LAUNCH CHECKLIST" :
                 screen == GameScreen.Simulation ? "LAUNCH AUTHORIZED" : screen == GameScreen.Results ? "EARTH FLIGHT LOG" : "MOON — POLE-7 ARRIVAL";
             Label(transform, title, .03f, .84f, .94f, .075f, 38, Color.white);
+            if (screen == GameScreen.Configuration)
+                ActionButton(transform, "OPEN 3D ASSEMBLY", .72f, .84f, .25f, .07f,
+                    () => EarthAssemblyView.Open(transform, session), Orange);
             subtitle = Label(transform, screen == GameScreen.Configuration ? "Compare parts, fit the ship, and prepare the cargo for Pole-7." :
                 "Commander " + PlayerPrefs.GetString("FarSignal.CommanderName", "Alex"), .03f, .79f, .94f, .045f, 19, Muted);
             body = Box(transform, "Content", .03f, .14f, .94f, .63f, Color.clear);
@@ -113,13 +116,18 @@ namespace SagittariusA.Gameplay.UI
             for (int i = 0; i < options.Length; i++)
             {
                 var part = options[i]; bool selected = category == 6 ? b.cargo.Contains(part.id) : b.parts[category] == part.id;
-                var button = ActionButton(body, "", .215f, .80f - (i + 1) * (height + .016f), .43f, height,
+                int group = category;
+                float y = .80f - (i + 1) * (height + .016f);
+                var button = ActionButton(body, "", .215f, y, .35f, height,
                     () => { if (category == 6) session.ToggleCargo(part.id); else session.SelectPart(category, part.id); }, selected ? new Color(.23f, .16f, .10f) : Card);
                 button.interactable = !session.Launched && !session.Busy;
                 button.name = part.id;
                 Label(button.transform, (selected ? "[SELECTED]  " : "") + part.id.ToUpperInvariant() + "  ·  " + part.name,
                     .025f, .54f, .95f, .40f, category == 6 ? 17 : 20, Color.white);
                 Label(button.transform, Specs(part, category), .025f, .04f, .95f, .49f, category == 6 ? 16 : 18, Muted);
+                var info = ActionButton(body, "INFO", .57f, y, .075f, height,
+                    () => EarthPartDescription.Open(transform, part, group));
+                info.name = "Description-" + part.id;
             }
             var dashboard = Box(body, "Resources", .67f, 0, .33f, 1, Card);
             Label(dashboard, "LIVE SHIP TOTALS", .06f, .91f, .88f, .07f, 20, Orange);
@@ -192,8 +200,8 @@ namespace SagittariusA.Gameplay.UI
                 button.gameObject.AddComponent<LayoutElement>().preferredHeight = screen == GameScreen.Configuration ? 105 : 85;
             }
         }
-        private static string Money(int value) => "$" + (value / 1000000f).ToString("0.##") + "M";
-        private static string Specs(EarthPart p, int group)
+        internal static string Money(int value) => "$" + (value / 1000000f).ToString("0.##") + "M";
+        internal static string Specs(EarthPart p, int group)
         {
             string cost = Money(p.costUsd) + "  ·  ";
             switch (group)
@@ -207,21 +215,21 @@ namespace SagittariusA.Gameplay.UI
                 default: return cost + $"{p.massKg} kg · {p.slots} spaces" + (p.required ? " · REQUIRED" : p.extraPowerKw > 0 ? " · +3 kW when on" : p.extraFuelUnits > 0 ? " · +8 fuel" : " · optional");
             }
         }
-        private static RectTransform Box(Transform parent, string name, float x, float y, float w, float h, Color color)
+        internal static RectTransform Box(Transform parent, string name, float x, float y, float w, float h, Color color)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image)); go.transform.SetParent(parent, false);
             var rect = (RectTransform)go.transform; Place(rect, x, y, w, h); go.GetComponent<Image>().color = color; return rect;
         }
         private static void Place(RectTransform rect, float x, float y, float w, float h)
         { rect.anchorMin = new Vector2(x, y); rect.anchorMax = new Vector2(x + w, y + h); rect.offsetMin = rect.offsetMax = Vector2.zero; }
-        private static Text Label(Transform parent, string text, float x, float y, float w, float h, int size, Color color)
+        internal static Text Label(Transform parent, string text, float x, float y, float w, float h, int size, Color color)
         {
             var go = new GameObject("Label", typeof(RectTransform), typeof(Text)); go.transform.SetParent(parent, false); Place((RectTransform)go.transform, x, y, w, h);
             var label = go.GetComponent<Text>(); label.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); label.text = text;
             label.fontSize = size; label.color = color; label.alignment = TextAnchor.MiddleLeft; label.supportRichText = false; label.raycastTarget = false;
             return label;
         }
-        private static Button ActionButton(Transform parent, string text, float x, float y, float w, float h, Action action, Color? color = null)
+        internal static Button ActionButton(Transform parent, string text, float x, float y, float w, float h, Action action, Color? color = null)
         {
             var rect = Box(parent, text, x, y, w, h, color ?? Card); var button = rect.gameObject.AddComponent<Button>();
             button.targetGraphic = rect.GetComponent<Image>(); button.onClick.AddListener(() => action());

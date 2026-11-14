@@ -133,9 +133,12 @@ namespace SagittariusA.Gameplay.Flow
             Mutated();
         }
         public void ToggleCargo(string id)
+        { SetCargo(id, !draft.build.cargo.Contains(id)); }
+        public void SetCargo(string id, bool included)
         {
             if (Busy || Launched || !Catalog.cargo.Any(p => p.id == id)) return;
-            if (!draft.build.cargo.Remove(id)) draft.build.cargo.Add(id);
+            if (draft.build.cargo.Contains(id) == included) return;
+            if (included) draft.build.cargo.Add(id); else draft.build.cargo.Remove(id);
             draft.checks.placements.Clear();
             if (id == "laser") ClearPower();
             Mutated();
