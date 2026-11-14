@@ -10,10 +10,12 @@ namespace MissionSimulation.FarSignal
         public string title, missionId, nextMissionId, status;
         public long budgetUsd, busCostUsd;
         public float busMassKg, busPowerKw, minimumBatteryKwh, minimumFuelUnits;
+        public ResultMessages resultMessages;
         public Launcher[] launchers; public Nozzle[] nozzles; public Fairing[] fairings;
         public Engine[] engines; public CargoBay[] cargoModules; public PowerSystem[] powerSystems;
         public Cargo[] cargo; public LandingPad[] landingMap;
     }
+    [Serializable] public class ResultMessages { public string blocked, success, successWithTradeoffs; }
     [Serializable] public class Launcher { public string id, name; public long costUsd; public float basePayloadKg; public string[] nozzleMounts; }
     [Serializable] public class Nozzle { public string id, name, mount; public long costUsd; public float payloadGainKg; }
     [Serializable] public class Fairing { public string id, name; public long costUsd; public int maxModuleSize; public float payloadLossKg; }
@@ -45,11 +47,42 @@ namespace MissionSimulation.FarSignal
         public List<Issue> issues = new List<Issue>();
         public bool CanLaunch { get { return !issues.Exists(i => i.level == IssueLevel.Error); } }
     }
+    public enum LaunchOutcome { Blocked, Ready, ReadyWithWarnings }
+    [Serializable] public class LaunchResult
+    {
+        public LaunchOutcome outcome;
+        public string summary;
+        public LaunchReport report;
+        // Snapshot prepared for the next chapter. The caller decides when to persist it.
+        public EarthDesign designSnapshot;
+        public string nextMissionId;
+    }
 
     // Pure C#: no Unity, scene, UI, filesystem or global-state dependencies.
     public sealed class EarthLaunchSimulator
     {
         static void Add(LaunchReport r, IssueLevel level, string code, string text, string fix) { r.issues.Add(new Issue(level, code, text, fix)); }
+        // This evaluates launch readiness, not the unimplemented flight or landing.
+        public LaunchResult Evaluate(EarthScenario s, EarthDesign d)
+        {
+            var report = Validate(s, d);
+            var result = new LaunchResult { report = report };
+            if (!report.CanLaunch)
+            {
+                result.outcome = LaunchOutcome.Blocked;
+                result.summary = s.resultMessages != null && !string.IsNullOrEmpty(s.resultMessages.blocked) ? s.resultMessages.blocked : "Launch is on hold. Review the checklist.";
+                return result;
+            }
+            result.outcome = report.issues.Any(i => i.level == IssueLevel.Warning) ? LaunchOutcome.ReadyWithWarnings : LaunchOutcome.Ready;
+            result.summary = result.outcome == LaunchOutcome.Ready ? "Launch checks passed." : "Launch checks passed with warnings. Review the backup plan.";
+            result.nextMissionId = s.nextMissionId;
+            result.designSnapshot = new EarthDesign {
+                launcherId = d.launcherId, nozzleId = d.nozzleId, fairingId = d.fairingId, engineId = d.engineId,
+                cargoModuleId = d.cargoModuleId, powerSystemId = d.powerSystemId, landingPadId = d.landingPadId,
+                cargo = (d.cargo ?? new CargoPlacement[0]).Select(x => new CargoPlacement { cargoId = x.cargoId, startSlot = x.startSlot }).ToArray()
+            };
+            return result;
+        }
         public LaunchReport Validate(EarthScenario s, EarthDesign d)
         {
             if (s == null || d == null) throw new ArgumentNullException(s == null ? "scenario" : "design");
@@ -75,6 +108,8 @@ namespace MissionSimulation.FarSignal
                 if (placement == null) { Add(r, IssueLevel.Error, "cargo", "A cargo placement is missing.", "Choose a cargo item and position."); continue; }
                 var item = s.cargo.FirstOrDefault(x => x.id == placement.cargoId);
                 if (item == null || !selected.Add(placement.cargoId)) { Add(r, IssueLevel.Error, "cargo", "An unknown or duplicate cargo item was selected.", "Remove the duplicate or select a valid item."); continue; }
+                if (item.slots <= 0 || placement.startSlot < 0 || placement.startSlot > bay.slots || item.slots > bay.slots - placement.startSlot)
+                { Add(r, IssueLevel.Error, "cargo_slots", item.name + " does not fit in the cargo bay.", "Move the item or select a larger cargo bay."); continue; }
                 r.costUsd += item.costUsd; r.payloadKg += item.massKg; r.requiredPowerKw += item.extraPowerKw; r.fuelUnits += item.extraFuelUnits; r.usedCargoSlots += item.slots;
                 // A start slot represents a contiguous run; this guarantees the panel's adjacency requirement.
                 for (int slot = placement.startSlot; slot < placement.startSlot + item.slots; slot++)

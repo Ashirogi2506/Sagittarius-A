@@ -39,5 +39,32 @@ namespace MissionSimulation.Tests
             design.landingPadId="ridge"; var r=simulator.Validate(scenario,design);
             Assert.IsTrue(r.CanLaunch); Assert.IsTrue(r.issues.Any(x=>x.code=="landing_fuel"));
         }
+        [Test] public void BlockedDesignDoesNotAdvance()
+        {
+            design.nozzleId="n3"; var r=simulator.Evaluate(scenario,design);
+            Assert.AreEqual(LaunchOutcome.Blocked,r.outcome); Assert.IsNull(r.nextMissionId); Assert.IsNull(r.designSnapshot);
+        }
+        [Test] public void ReadyDesignProducesIndependentSnapshot()
+        {
+            var r=simulator.Evaluate(scenario,design);
+            Assert.AreEqual(LaunchOutcome.Ready,r.outcome); Assert.AreEqual("pole-7",r.nextMissionId);
+            design.cargo[0].startSlot=2; Assert.AreEqual(0,r.designSnapshot.cargo[0].startSlot);
+        }
+        [Test] public void WarningsArePreservedInReadinessResult()
+        {
+            design.landingPadId="ridge"; var r=simulator.Evaluate(scenario,design);
+            Assert.AreEqual(LaunchOutcome.ReadyWithWarnings,r.outcome); Assert.IsTrue(r.report.issues.Any(x=>x.code=="landing_fuel"));
+        }
+        [Test] public void OverBudgetAndOverweightAreBlocking()
+        {
+            scenario.budgetUsd=1; scenario.busMassKg=50000;
+            var r=simulator.Validate(scenario,design); Assert.IsFalse(r.CanLaunch);
+            Assert.IsTrue(r.issues.Any(x=>x.code=="mass")); Assert.IsTrue(r.issues.Any(x=>x.code=="budget"));
+        }
+        [Test] public void InvalidSlotsFailWithoutArithmeticOverflow()
+        {
+            design.cargo[0].startSlot=int.MaxValue;
+            Assert.IsTrue(simulator.Validate(scenario,design).issues.Any(x=>x.code=="cargo_slots"));
+        }
     }
 }
