@@ -9,11 +9,18 @@ namespace MissionSimulation
         public string id, name, destination, assumptions;
         public float budget, durationDays, minimumReliability, partialThreshold, successThreshold;
         public MissionObjective objective;
+        public SimulationRules rules;
+        public string[] requiredSystemTags;
         public SpacecraftComponent[] components;
         public OrbitOption[] orbits;
         public LaunchVehicle[] launchers;
         public EnvironmentalHazard[] hazards;
         public MissionEvent[] events;
+    }
+    [Serializable] public class SimulationRules
+    {
+        public float objectivePoints, sciencePoints, engineeringPoints, efficiencyPoints, reliabilityPoints, dataPoints;
+        public float warningPenalty, missingSupportFactor, shortageReliabilityFloor;
     }
     [Serializable] public class MissionObjective
     {
