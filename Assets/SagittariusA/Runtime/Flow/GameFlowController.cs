@@ -82,6 +82,8 @@ namespace SagittariusA.Gameplay.Flow
         private Text maleStatus;
         private Text femaleStatus;
         private InputField nameInput;
+        private Button saveButton;
+        private Text saveStatus;
         private Button continueButton;
         private string selectedId;
         private Color selectedColor;
@@ -97,6 +99,8 @@ namespace SagittariusA.Gameplay.Flow
             Text configuredMaleStatus,
             Text configuredFemaleStatus,
             InputField configuredNameInput,
+            Button configuredSaveButton,
+            Text configuredSaveStatus,
             Color configuredSelectedColor,
             Color configuredNormalColor,
             Color configuredAccentColor,
@@ -109,6 +113,8 @@ namespace SagittariusA.Gameplay.Flow
             maleStatus = configuredMaleStatus;
             femaleStatus = configuredFemaleStatus;
             nameInput = configuredNameInput;
+            saveButton = configuredSaveButton;
+            saveStatus = configuredSaveStatus;
             selectedColor = configuredSelectedColor;
             normalColor = configuredNormalColor;
             accentColor = configuredAccentColor;
@@ -120,9 +126,10 @@ namespace SagittariusA.Gameplay.Flow
 
             maleButton.onClick.AddListener(SelectMale);
             femaleButton.onClick.AddListener(SelectFemale);
-            nameInput.onValueChanged.AddListener(CacheName);
-            nameInput.onEndEdit.AddListener(SaveName);
+            saveButton.onClick.AddListener(SaveCurrentProfile);
+            nameInput.onValueChanged.AddListener(MarkUnsaved);
             RefreshSelection();
+            ShowSavedStatus();
         }
 
         public void BindContinueButton(Button configuredContinueButton)
@@ -161,6 +168,7 @@ namespace SagittariusA.Gameplay.Flow
             PlayerPrefs.SetString(CommanderIdKey, selectedId);
             SaveName(nameInput.text);
             RefreshSelection();
+            ShowSavedStatus();
         }
 
         private void SaveName(string value)
@@ -172,15 +180,33 @@ namespace SagittariusA.Gameplay.Flow
             PlayerPrefs.Save();
         }
 
-        private void CacheName(string value)
+        private void MarkUnsaved(string value)
         {
-            PlayerPrefs.SetString(CommanderNameKey, value);
+            if (saveStatus == null)
+            {
+                return;
+            }
+
+            saveStatus.text = "UNSAVED CHANGES";
+            saveStatus.color = mutedColor;
         }
 
         private void SaveCurrentProfile()
         {
             PlayerPrefs.SetString(CommanderIdKey, selectedId);
             SaveName(nameInput.text);
+            ShowSavedStatus();
+        }
+
+        private void ShowSavedStatus()
+        {
+            if (saveStatus == null)
+            {
+                return;
+            }
+
+            saveStatus.text = $"PROFILE SAVED · {nameInput.text.ToUpperInvariant()}";
+            saveStatus.color = accentColor;
         }
 
         private void RefreshSelection()
@@ -208,8 +234,11 @@ namespace SagittariusA.Gameplay.Flow
 
             if (nameInput != null)
             {
-                nameInput.onValueChanged.RemoveListener(CacheName);
-                nameInput.onEndEdit.RemoveListener(SaveName);
+                nameInput.onValueChanged.RemoveListener(MarkUnsaved);
+            }
+            if (saveButton != null)
+            {
+                saveButton.onClick.RemoveListener(SaveCurrentProfile);
             }
 
             if (continueButton != null)
@@ -550,10 +579,14 @@ namespace SagittariusA.Gameplay.Flow
             input.textComponent = nameText;
             input.placeholder = placeholder;
             input.characterLimit = 24;
-            CreateLabel(profile.transform, "The chosen name and portrait remain with the expedition through Earth, Moon, Mars, and Ganymede.", 16, FontStyle.Normal, MutedText, new Vector2(0.07f, 0.15f), new Vector2(0.93f, 0.39f));
+            Button saveButton = CreateButton("SaveProfile", profile.transform, "SAVE PROFILE", Accent);
+            Stretch(saveButton.GetComponent<RectTransform>(), new Vector2(0.56f, 0.3f), new Vector2(0.93f, 0.41f), Vector2.zero, Vector2.zero);
+            saveButton.GetComponentInChildren<Text>().fontSize = 15;
+            Text saveStatus = CreateLabel(profile.transform, "PROFILE SAVED", 12, FontStyle.Bold, Success, new Vector2(0.07f, 0.29f), new Vector2(0.52f, 0.41f));
+            CreateLabel(profile.transform, "The chosen name and portrait remain with the expedition through Earth, Moon, Mars, and Ganymede.", 15, FontStyle.Normal, MutedText, new Vector2(0.07f, 0.06f), new Vector2(0.93f, 0.27f));
 
             CommanderSetupView setup = parent.gameObject.AddComponent<CommanderSetupView>();
-            setup.Configure(maleButton, femaleButton, male, female, maleStatus, femaleStatus, input, CardSelected, Card, Success, MutedText);
+            setup.Configure(maleButton, femaleButton, male, female, maleStatus, femaleStatus, input, saveButton, saveStatus, CardSelected, Card, Success, MutedText);
         }
 
         private static void BuildMissionCards(Transform parent)
