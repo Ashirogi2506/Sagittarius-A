@@ -58,5 +58,20 @@ namespace MissionSimulation.Tests
             packing = new CargoPackingMinigame("c3",6); packing.Place("panel",0); packing.Place("kit",2); packing.Lock("panel"); packing.Lock("kit");
             var report = Check(3); Assert.IsTrue(report.issues.Any(x=>x.code=="cargo_packing")); Assert.IsFalse(report.CanLaunch);
         }
+        [Test] public void LaserCannotBeReportedPoweredBeforeItIsTested()
+        {
+            design.powerSystemId="p2"; design.cargoModuleId="c2"; design.fairingId="f2";
+            design.cargo = new[] { new CargoPlacement { cargoId="panel",startSlot=0 }, new CargoPlacement { cargoId="kit",startSlot=2 }, new CargoPlacement { cargoId="laser",startSlot=3 } };
+            packing = new CargoPackingMinigame("c2",4); packing.Place("panel",0); packing.Place("kit",2); packing.Place("laser",3); packing.Lock("panel"); packing.Lock("kit"); packing.Lock("laser");
+            power = new EarthPowerTest("p2",8f,true); power.SetCabin(true); power.SetRadio(true);
+            Assert.IsFalse(Check(3).laserPowered);
+            Assert.IsTrue(power.TryLaser()); Assert.IsTrue(Check(3).laserPowered);
+        }
+        [Test] public void ImpossibleSavedLaserStateBlocksLaunch()
+        {
+            var impossible = power.Snapshot(); impossible.laserOn = true;
+            var result = new EarthLaunchChecklist().Validate(scenario,design,packing.Snapshot(),impossible,new LandingPlan { padId="main", hasArrivalMinute=true, arrivalMinute=3 });
+            Assert.IsTrue(result.issues.Any(x=>x.code=="power_test_state")); Assert.IsFalse(result.CanLaunch); Assert.IsFalse(result.laserPowered);
+        }
     }
 }

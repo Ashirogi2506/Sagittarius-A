@@ -53,6 +53,15 @@ namespace MissionSimulation.FarSignal
                 Issue(result, IssueLevel.Warning, "landing_shadow", "This pad is in shadow at the selected time.", "Choose an earlier time or another pad.");
             if (power == null || power.powerSystemId != design.powerSystemId || !power.cabinOn || !power.radioOn || result.availablePowerKw < 3f)
                 Issue(result, IssueLevel.Error, "power_test", "The cabin and radio power test is incomplete for the selected power system.", "Turn on the cabin and radio and complete the test for this system.");
+            // Report the tested state, not merely whether the selected hardware could power the laser.
+            bool laserLoaded = design.cargo != null && design.cargo.Any(x => x != null && x.cargoId == "laser");
+            bool invalidLaserState = power != null && ((power.laserOn && power.laserTripped) ||
+                ((power.laserOn || power.laserTripped) && !laserLoaded) ||
+                (power.laserOn && (!power.cabinOn || !power.radioOn || result.availablePowerKw < 6f)) ||
+                (power.laserTripped && result.availablePowerKw >= 6f));
+            if (invalidLaserState)
+                Issue(result, IssueLevel.Error, "power_test_state", "The saved laser test does not match the selected equipment or power system.", "Repeat the power test with the current cargo and power system.");
+            result.laserPowered = power != null && !invalidLaserState && power.powerSystemId == design.powerSystemId && power.laserOn;
             if (bay == null || cargo == null || cargo.items == null || cargo.bayId != design.cargoModuleId || cargo.slotCount != bay.slots || design.cargo == null)
                 Issue(result, IssueLevel.Error, "cargo_packing", "Cargo packing is missing or belongs to a different bay.", "Repack and lock the cargo in the selected bay.");
             else
