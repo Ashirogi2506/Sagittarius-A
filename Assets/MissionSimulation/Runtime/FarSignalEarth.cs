@@ -58,12 +58,14 @@ namespace MissionSimulation.FarSignal
         public string nextMissionId;
     }
     public enum LandingFuelOutcome { InvalidInput, SufficientFuel, InsufficientFuel }
+    public enum RestartDestination { None, PreLaunchCheckpoint }
     [Serializable] public class LandingFuelResult
     {
         public LandingFuelOutcome outcome;
         public string explanation;
         // The game controller owns the actual failure screen and restart action.
         public bool restartRequired;
+        public RestartDestination restartDestination;
         public float availableFuelUnits, requiredFuelUnits;
     }
 
@@ -84,7 +86,8 @@ namespace MissionSimulation.FarSignal
             if (remainingFuelUnits < pad.fuelUnits)
             {
                 result.outcome = LandingFuelOutcome.InsufficientFuel; result.restartRequired = true;
-                result.explanation = "Not enough fuel for the selected landing pad. The mission fails and must be restarted.";
+                result.restartDestination = RestartDestination.PreLaunchCheckpoint;
+                result.explanation = "Not enough fuel for the selected landing pad. Return to the pre-launch checkpoint and restart the flight.";
             }
             else
             {

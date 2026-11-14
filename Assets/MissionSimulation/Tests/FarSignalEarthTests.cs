@@ -98,18 +98,20 @@ namespace MissionSimulation.Tests
             var result = simulator.CheckLandingFuel(scenario, "ridge", 12);
             Assert.AreEqual(LandingFuelOutcome.InsufficientFuel, result.outcome);
             Assert.IsTrue(result.restartRequired);
+            Assert.AreEqual(RestartDestination.PreLaunchCheckpoint, result.restartDestination);
         }
         [Test] public void ExactLandingFuelIsSufficient()
         {
             var result = simulator.CheckLandingFuel(scenario, "ridge", 13);
             Assert.AreEqual(LandingFuelOutcome.SufficientFuel, result.outcome);
             Assert.IsFalse(result.restartRequired);
+            Assert.AreEqual(RestartDestination.None, result.restartDestination);
         }
         [Test] public void InvalidFuelOrPadDoesNotPretendMissionFailed()
         {
             Assert.AreEqual(LandingFuelOutcome.InvalidInput, simulator.CheckLandingFuel(scenario, "ridge", float.NaN).outcome);
             var result = simulator.CheckLandingFuel(scenario, "unknown", 12);
-            Assert.AreEqual(LandingFuelOutcome.InvalidInput, result.outcome); Assert.IsFalse(result.restartRequired);
+            Assert.AreEqual(LandingFuelOutcome.InvalidInput, result.outcome); Assert.IsFalse(result.restartRequired); Assert.AreEqual(RestartDestination.None, result.restartDestination);
         }
     }
 }
