@@ -13,7 +13,7 @@ namespace SagittariusA.Gameplay.Minigames
     // then shows the returned MinigameResult. Writes no saves and touches no campaign state.
     public sealed class MinigameTestLauncher : MonoBehaviour
     {
-        private int difficulty = 1, seed = 12345, selected;
+        private int difficulty = 1, seed = 12345;
         private bool timed = true, allowCancel = true;
         private Text settingsText, resultText;
         private string[] ids;

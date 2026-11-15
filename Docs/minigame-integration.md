@@ -143,7 +143,7 @@ Until then, `PendingEffectsSimulationAdapter` logs every result and stores the e
 `MinigameInputLock` captures state on start and restores it on every exit path. Success, partial, failure, cancel, an exception during start, a scene change and the manager being destroyed are all exit paths.
 
 - **Time.** `Time.timeScale` is saved and set to 0 (`MinigameDefinition.PauseWorld`). All minigame logic uses `Time.unscaledDeltaTime`.
-- **3D input behaviours.** Registered behaviours are disabled: `MoonFirstPersonController` and `MissionSimulation.Player.PlayerController`. Both are registered by `MinigameGameFlowAdapter`, and you can add more with `MinigameInputLock.RegisterBlockerType<T>()`.
+- **3D input behaviours.** Registered behaviours are disabled: `MoonFirstPersonController` and `MissionSimulation.Player.PlayerController`. `MinigameGameFlowAdapter` finds both by name, so the folder also compiles in a project without them. You can add more with `MinigameInputLock.RegisterBlockerType<T>()`.
 - **PlayerInput.** Every `PlayerInput` action map except `UI` is disabled.
 - **Cursor.** The cursor is unlocked and shown, then restored afterwards.
 - **UI selection.** The previously selected UI element is restored.

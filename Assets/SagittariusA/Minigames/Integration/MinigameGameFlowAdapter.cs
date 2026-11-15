@@ -1,6 +1,5 @@
 using System;
-using MissionSimulation.Player;
-using SagittariusA.Gameplay.Flow;
+using System.Linq;
 using SagittariusA.Minigames;
 using UnityEngine;
 
@@ -14,12 +13,22 @@ namespace SagittariusA.Gameplay.Minigames
     {
         public static IMinigameSimulationAdapter Simulation { get; set; } = new PendingEffectsSimulationAdapter();
 
+        // Found by name so this folder also compiles in a project without the team's player scripts.
+        private static readonly string[] InputBehaviourTypes = {
+            "SagittariusA.Gameplay.Flow.MoonFirstPersonController",
+            "MissionSimulation.Player.PlayerController",
+        };
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void RegisterInputBlockers()
         {
             // These read Keyboard/Mouse directly every frame, so they are switched off while a minigame is open.
-            MinigameInputLock.RegisterBlockerType<MoonFirstPersonController>();
-            MinigameInputLock.RegisterBlockerType<PlayerController>();
+            foreach (var name in InputBehaviourTypes)
+            {
+                var type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name, false)).FirstOrDefault(t => t != null);
+                if (type == null || !typeof(Behaviour).IsAssignableFrom(type)) continue;
+                MinigameInputLock.RegisterBlocker(() => UnityEngine.Object.FindObjectsByType(type, FindObjectsInactive.Exclude, FindObjectsSortMode.None).OfType<Behaviour>());
+            }
         }
 
         // Start a minigame from a mission event. The simulation adapter receives the result before the caller does.
