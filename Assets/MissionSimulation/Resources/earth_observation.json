@@ -277,10 +277,10 @@
   "rules": {
     "objectivePoints": 30,
     "sciencePoints": 20,
-    "engineeringPoints": 15,
+    "engineeringPoints": 20,
     "efficiencyPoints": 10,
     "reliabilityPoints": 10,
-    "dataPoints": 15,
+    "dataPoints": 10,
     "warningPenalty": 0.15,
     "missingSupportFactor": 0.5,
     "shortageReliabilityFloor": 0.5

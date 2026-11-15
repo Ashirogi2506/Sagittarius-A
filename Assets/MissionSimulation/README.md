@@ -1,6 +1,6 @@
 # Mission simulation module
 
-Unity C# module for the Earth-observation vertical slice. Copy `Assets/MissionSimulation` into the team's Unity project's `Assets` folder. This folder is not a complete Unity project. The simulation has no scene, UI, or model dependencies; the JSON loader uses Unity's `JsonUtility`. Install/enable the Unity Test Framework and run the Edit Mode tests in Test Runner after importing.
+Unity C# module for the Earth-observation vertical slice and draft campaign rules. This branch is not a complete Unity project. The team's gameplay branch already contains an `Assets/MissionSimulation` folder with some of the same files. Integrate by reviewing changes at the existing paths; do not copy this folder into a second location or replace the existing folder wholesale. Preserve existing `.meta` files and scene references. The simulation has no scene, UI, or model dependencies; the JSON loader uses Unity's `JsonUtility`. Run the Edit Mode tests in the team's project after integration.
 
 ## UI integration
 
@@ -34,4 +34,4 @@ NASA background for the communications and orbit concepts (not a source for this
 
 ## Integration status
 
-The module is on the `feature/mission-simulation` branch in a draft pull request. A complete Unity project and UI were not yet available. Scene integration, tests in Unity, builds, and additional mission configurations remain to be completed in the team project. The C# simulation core compiled locally, but the local operating system blocked execution of the standalone test program; this is not a passed test run.
+The newer campaign Earth launch rules and the original Earth-observation simulator are separate models with different inputs and units; neither should be copied or called twice for the same calculation. The API and remaining limitations are documented in `Docs/mission-simulation-api.md`. Scene integration, Unity Test Runner checks, durable campaign persistence, and a complete end-to-end campaign remain to be completed in the team project.

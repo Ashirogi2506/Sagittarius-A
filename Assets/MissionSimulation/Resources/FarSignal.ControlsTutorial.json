@@ -1,0 +1,12 @@
+{
+  "id": "far-signal-controls-intro",
+  "steps": [
+    { "id": "move", "title": "Move", "instruction": "Use {control} to move.", "actionId": "move" },
+    { "id": "look", "title": "Look around", "instruction": "Use {control} to look around.", "actionId": "look" },
+    { "id": "interact", "title": "Interact", "instruction": "Use {control} to interact with an object.", "actionId": "interact" },
+    { "id": "pickup", "title": "Pick up", "instruction": "Use {control} to pick up an item.", "actionId": "pickup" },
+    { "id": "inventory", "title": "Inventory", "instruction": "Use {control} to open your inventory.", "actionId": "inventory" },
+    { "id": "use", "title": "Use an item", "instruction": "Use {control} to use an item.", "actionId": "use" },
+    { "id": "break", "title": "Break or open", "instruction": "Use {control} to break or manually open an object when the game allows it.", "actionId": "break" }
+  ]
+}

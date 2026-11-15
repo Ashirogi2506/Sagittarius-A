@@ -90,7 +90,7 @@ namespace MissionSimulation
     [Serializable] public class ScoreBreakdown
     {
         public List<ScoreEntry> entries = new List<ScoreEntry>();
-        public float Total { get { float n = 0; foreach (var e in entries) n += e.points; return n; } }
+        public float Total { get { float n = 0; foreach (var e in entries) n += e.points; return Math.Max(0f, Math.Min(100f, n)); } }
     }
     public enum MissionOutcome { Blocked, Failure, PartialSuccess, Success }
     [Serializable] public class SimulationResult

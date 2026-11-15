@@ -77,5 +77,13 @@ namespace MissionSimulation.Tests
             var result = simulator.Run(scenario, Design(), 42);
             Assert.AreEqual(12f, result.score.entries.First(x => x.category == "Objective completion").maximum);
         }
+        [Test] public void TotalScoreStaysWithinBoundsEvenForBadWeights()
+        {
+            var score = new ScoreBreakdown();
+            score.entries.Add(new ScoreEntry("test", 120, 120, "test"));
+            Assert.AreEqual(100f, score.Total);
+            score.entries[0].points = -10;
+            Assert.AreEqual(0f, score.Total);
+        }
     }
 }

@@ -1,0 +1,20 @@
+# Earth launch checklist - proposed integration
+
+`EarthLaunchSimulator.Validate` remains a resource/design preview only; it does not check locks, the completed power test, or arrival time. Do not launch the campaign from that preview. For the pre-launch checklist use `EarthLaunchChecklist.Validate(scenario, design, cargoSnapshot, powerSnapshot, landingPlan)` and show every returned issue. Only a report with `CanLaunch == true` has passed these checks. The campaign controller still owns saving and the actual launch transition.
+
+```csharp
+var power = new EarthPowerTest(design.powerSystemId, selectedPower.maxPowerKw, laserLoaded);
+power.SetCabin(true);
+power.SetRadio(true);
+if (laserLoaded) power.TryLaser(); // optional: an overload trips only the laser
+var plan = new LandingPlan { padId = design.landingPadId, hasArrivalMinute = true, arrivalMinute = 3 };
+var report = new EarthLaunchChecklist().Validate(scenario, design, packing.Snapshot(), power.Snapshot(), plan);
+```
+
+The example variables and surrounding game adapters must be supplied by the team. Construct packing as `new CargoPackingMinigame(design.cargoModuleId, selectedBay.slots)` so the bay ID is retained. When the player changes power system, create a new `EarthPowerTest` so the test starts again. `EarthLaunchChecklist` reports `laserPowered` and `requiredPowerKw` from the tested on/off state. A loaded but untested laser does not trigger an overload warning; after an overload attempt the laser trips and the warning states the 6 kW peak and available power. Contradictory or stale laser test data blocks launch until the test is repeated. Use `ChangeBay(newBayId, newSlotCount)` on a bay change; it clears cargo when the bay changes, even when both bays have the same number of slots. Cargo placements in the design and packing snapshot must match; locks are checked for all loaded items. Use `TryRestore(saved, selectedBayId, selectedSlotCount, out packing)` to reject invalid or mismatched saved packing. Earlier snapshots without a bay ID need an explicit team-approved migration and are not accepted as launch-ready. The team-owned UI must persist the necessary test, lock and landing state via the agreed save system. This code does not perform a launch, spend fuel, or save state.
+
+To reconstruct the power test after loading, call `EarthPowerTest.TryRestore(scenario, design, savedPower, out power)`; it reads capacity from the selected scenario system and rejects contradictory or incompatible saved state. If it returns false, repeat the power test; do not treat the bad snapshot as passed.
+
+The user specified that insufficient fuel at landing restarts the flight at the pre-launch checkpoint. This differs from the campaign brief's recoverable retry; coordinate the change with the team. `CheckLandingFuel` returns `RestartDestination.PreLaunchCheckpoint` for insufficient fuel; the campaign controller and authoritative save system own the actual checkpoint restore. The checklist itself does not deduct fuel or restore state.
+
+Draft gameplay values are 2 kW cabin, 1 kW radio, 3 kW laser, a 0-10 minute planning range and a warning at 100 kg or less payload margin. Pad daylight windows and fuel prices come from the mission data. These are game values, not official engineering specifications. The code and Unity Edit Mode tests are not yet verified in an actual Unity project.
