@@ -33,7 +33,7 @@ namespace SagittariusA.Gameplay.UI
         private readonly List<(Text label, int group)> socketLabels = new List<(Text, int)>();
         private int group;
         private bool dirty;
-        private float yaw = 22, pitch = 8, zoom = 6.4f;
+        private float yaw = 22, pitch = 8, zoom = 5.7f;
 
         public static void Create(Transform parent)
         {
@@ -115,7 +115,7 @@ namespace SagittariusA.Gameplay.UI
             previewCamera.orthographic = true;
             previewCamera.nearClipPlane = .1f; previewCamera.farClipPlane = 60;
             cameraObject.transform.localPosition = new Vector3(0, 0, -20);
-            texture = new RenderTexture(960, 960, 24) { name = "Earth assembly preview" };
+            texture = new RenderTexture(1536, 1536, 24) { name = "Earth assembly preview", antiAliasing = 4 };
             texture.Create(); previewCamera.targetTexture = texture; display.texture = texture;
             var lightObject = new GameObject("Assembly light", typeof(Light));
             lightObject.transform.SetParent(studio.transform, false);

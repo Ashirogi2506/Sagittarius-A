@@ -259,7 +259,12 @@ namespace SagittariusA.Gameplay.Flow
             if (draft.phase != MoonStagePhase.Pole7CartRepair) return result;
             CartWheelState state = draft.cart;
             bool allClean = state.cleaned != null && state.cleaned.Length == 3 && state.cleaned.All(x => x);
-            if (!state.foundJam) result.Add(MoonInteractionIds.StartCart);
+            if (state.testPassed)
+            {
+                if (!state.panelLoaded) result.Add(MoonInteractionIds.LoadPanel);
+                if (!state.kitLoaded) result.Add(MoonInteractionIds.LoadKit);
+            }
+            else if (!state.foundJam) result.Add(MoonInteractionIds.StartCart);
             else if (state.powered) result.Add(MoonInteractionIds.SwitchCartOff);
             else if (state.coverOpen)
             {
@@ -269,12 +274,7 @@ namespace SagittariusA.Gameplay.Flow
                 if (allClean) result.Add(MoonInteractionIds.CloseWheelCover);
             }
             else if (!allClean) result.Add(MoonInteractionIds.OpenWheelCover);
-            else if (!state.testPassed) result.Add(MoonInteractionIds.RetestCart);
-            else
-            {
-                if (!state.panelLoaded) result.Add(MoonInteractionIds.LoadPanel);
-                if (!state.kitLoaded) result.Add(MoonInteractionIds.LoadKit);
-            }
+            else result.Add(MoonInteractionIds.RetestCart);
             return result;
         }
 
