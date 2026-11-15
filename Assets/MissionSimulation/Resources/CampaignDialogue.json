@@ -1,0 +1,197 @@
+{
+  "entries": [
+    {
+      "trigger": "earth_opening",
+      "lines": [
+        {
+          "speaker": "Khulan - Pole-7",
+          "line": "Commander {playerName}, this is Khulan at Pole-7. Can you hear me? I'm calling from the backup radio."
+        },
+        {
+          "speaker": "{playerName}",
+          "line": "We hear you, Khulan. What's happened?"
+        },
+        {
+          "speaker": "Khulan - Pole-7",
+          "line": "Our main power panel burned out. The crew is safe, but our beacons and main relay are down. I can talk to you from here. I can't guide you from the pad."
+        },
+        {
+          "speaker": "{playerName}",
+          "line": "We're still loading. Tell me what to bring."
+        },
+        {
+          "speaker": "Khulan - Pole-7",
+          "line": "A P-4 panel and an insulated repair kit. I'm sending our last route map. There's a cart at the pad. Use it for the panel and check the road before you take it through."
+        },
+        {
+          "speaker": "Sam - Flight Engineer",
+          "line": "Three cargo spaces for the panel and kit. I had plans for those spaces. The snack budget will recover."
+        },
+        {
+          "speaker": "{playerName}",
+          "line": "Put both on the checklist. We'll call again once we're in orbit."
+        }
+      ]
+    },
+    {
+      "trigger": "garage_first_open",
+      "lines": [
+        {
+          "speaker": "{playerName}",
+          "line": "Leave room for the laser cutter?"
+        },
+        {
+          "speaker": "Sam - Flight Engineer",
+          "line": "The laser can free a jammed cover in seconds, if the ship can power it. With the hand tools, it'll just take a little longer."
+        }
+      ]
+    },
+    {
+      "trigger": "required_cargo_secured",
+      "lines": [
+        {
+          "speaker": "Sam - Flight Engineer",
+          "line": "Both locks are green. That panel stays where you put it when the engines light."
+        }
+      ]
+    },
+    {
+      "trigger": "laser_overload",
+      "lines": [
+        {
+          "speaker": "Sam - Flight Engineer",
+          "line": "The laser pushed us over the power limit. Its breaker tripped. Cabin and radio are still on."
+        },
+        {
+          "speaker": "Sam - Flight Engineer",
+          "line": "We can swap the power system here or leave the laser off and open the cover by hand on the Moon."
+        }
+      ]
+    },
+    {
+      "trigger": "landing_map_first_open",
+      "lines": [
+        {
+          "speaker": "{playerName}",
+          "line": "Beacon Pad is right beside the base. Why did Khulan mark a second one?"
+        },
+        {
+          "speaker": "Sam - Flight Engineer",
+          "line": "Ridge Pad stays lit longer. We'll spend more fuel getting there and carry the panel farther, but it's there if we miss the Beacon window."
+        }
+      ]
+    },
+    {
+      "trigger": "orbit_reached",
+      "lines": [
+        {
+          "speaker": "Earth Flight Control",
+          "line": "Commander {playerName}, you're in orbit. Both repair items are secure. Pole-7 is listening on the backup channel."
+        },
+        {
+          "speaker": "{playerName}",
+          "line": "Khulan, we've got your panel and both locks are green. See you on the Moon."
+        }
+      ]
+    },
+    {
+      "trigger": "moon_arrival",
+      "lines": [
+        {
+          "line": "I can see your landing lights from the base. The cart is beside the pad, where the old map says it should be. The rest of that map is going to need your eyes.",
+          "speaker": "Khulan"
+        },
+        {
+          "line": "We'll mark the road as we go. Where do you want the panel?",
+          "speaker": "Commander {playerName}"
+        },
+        {
+          "line": "The cargo door under the mast. I'll open it when you park in the outline.",
+          "speaker": "Khulan"
+        }
+      ]
+    },
+    {
+      "trigger": "moon_wheel_passed",
+      "lines": [
+        {
+          "line": "Three dust patches, one working wheel. I'm writing ‘lunar mechanic’ on your job description.",
+          "speaker": "Sam"
+        },
+        {
+          "line": "Put it under ‘cargo delivery.’ We've still got a bridge to get around.",
+          "speaker": "Commander {playerName}"
+        }
+      ]
+    },
+    {
+      "trigger": "moon_relay_uploaded",
+      "lines": [
+        {
+          "line": "There it is. The main relay's back, and I can see the route you marked. I'll send it to the next crew before they land. Stay on this channel. Mars has a message for you.",
+          "speaker": "Khulan"
+        },
+        {
+          "line": "Commander {playerName}, the assembly bay is ready. Come to Mars and we'll test your Jupiter orbiter together.",
+          "speaker": "Mars engineer"
+        }
+      ]
+    },
+    {
+      "trigger": "mars_bench_passed",
+      "lines": [
+        {
+          "line": "That trace came from the sensor you fitted. Save it with the Mars test label. When Earth receives the first reading from Jupiter, you'll be able to put the two side by side.",
+          "speaker": "Mars engineer"
+        },
+        {
+          "line": "Test saved. Let's get it into the cradle.",
+          "speaker": "Commander {playerName}"
+        },
+        {
+          "line": "I'll watch the left clamp. You take the right.",
+          "speaker": "Sam"
+        }
+      ]
+    },
+    {
+      "trigger": "ganymede_both_readings",
+      "lines": [
+        {
+          "line": "We've got two places and two times. Tell the next crew exactly what we saw. They'll have something to compare with when they come back.",
+          "speaker": "Sam"
+        }
+      ]
+    },
+    {
+      "trigger": "orbiter_released",
+      "lines": [
+        {
+          "line": "Crew systems ready. Deployment point confirmed. Releasing the orbiter.",
+          "speaker": "Commander {playerName}"
+        },
+        {
+          "line": "Both clamps open. It's clear of the ship.",
+          "speaker": "Sam"
+        }
+      ]
+    },
+    {
+      "trigger": "earth_acknowledgement",
+      "lines": [
+        {
+          "line": "Commander {playerName}, we have the health report and the first readings. The orbiter is working on its own. You can head home.",
+          "speaker": "Earth Flight Control"
+        },
+        {
+          "line": "Copy, Earth. Save that first reading with our flight record.",
+          "speaker": "Commander {playerName}"
+        },
+        {
+          "line": "I'll leave the receiver on a little longer.",
+          "speaker": "Sam"
+        }
+      ]
+    }
+  ]
+}

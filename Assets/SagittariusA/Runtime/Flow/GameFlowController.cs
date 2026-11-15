@@ -23,6 +23,8 @@ namespace SagittariusA.Gameplay.Flow
             session.Initialize();
             var moon = GetComponent<MoonStageController>() ?? gameObject.AddComponent<MoonStageController>();
             moon.Connect(session);
+            var dialogue = GetComponent<CampaignDialogueDirector>() ?? gameObject.AddComponent<CampaignDialogueDirector>();
+            dialogue.Initialize(this, session, moon);
             RebuildViewMap();
 
             if (views.Count == 0)
