@@ -68,6 +68,7 @@ namespace SagittariusA.Gameplay.Flow
         public LunarDescentState descent;
         public CartWheelState cart = new CartWheelState();
         public MoonStagePhase phase;
+        public List<string> playedDialogueIds = new List<string>();
     }
 
     public interface IMoonDraftStore
@@ -94,6 +95,15 @@ namespace SagittariusA.Gameplay.Flow
         private readonly LunarDescent lunarDescent = new LunarDescent();
 
         public bool Initialized { get { return draft != null; } }
+        public bool CartTestPassed { get { return draft != null && draft.cart != null && draft.cart.testPassed; } }
+        public bool HasPlayedDialogue(string id) { return draft != null && draft.playedDialogueIds != null && draft.playedDialogueIds.Contains(id); }
+        public void MarkDialoguePlayed(string id)
+        {
+            if (draft == null || string.IsNullOrEmpty(id)) return;
+            if (draft.playedDialogueIds == null) draft.playedDialogueIds = new List<string>();
+            if (draft.playedDialogueIds.Contains(id)) return;
+            draft.playedDialogueIds.Add(id); Save();
+        }
         public MoonStagePhase Phase { get { return draft == null ? MoonStagePhase.Descent : draft.phase; } }
         public string Notice { get; private set; }
         public float RemainingFuelUnits { get { return draft != null && draft.descent != null ? draft.descent.remainingFuelUnits : 0; } }

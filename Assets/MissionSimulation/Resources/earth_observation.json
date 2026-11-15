@@ -1,0 +1,294 @@
+{
+  "id": "earth-observation",
+  "name": "Earth observation",
+  "destination": "Earth",
+  "assumptions": "All costs, masses, rates, thresholds, event probabilities and reliability values are illustrative gameplay assumptions; coordinate with the science designer.",
+  "budget": 160,
+  "durationDays": 30,
+  "minimumReliability": 0.8,
+  "partialThreshold": 0.3,
+  "successThreshold": 0.8,
+  "objective": {
+    "id": "observe",
+    "description": "Observe a region and return useful data.",
+    "requiredInstrumentTag": "earth-observation",
+    "requiredScience": 50,
+    "requiredDataMB": 10000
+  },
+  "components": [
+    {
+      "reliability": 0.99,
+      "destinations": [
+        "Earth"
+      ],
+      "tags": [
+        "bus", "computer", "thermal"
+      ],
+      "requiredTags": [],
+      "id": "bus",
+      "name": "Spacecraft bus",
+      "storageCapacityMB": 1000,
+      "kind": "system",
+      "explanation": "Illustrative gameplay value; not an engineering specification.",
+      "massKg": 100,
+      "cost": 20,
+      "powerUsedW": 20
+    },
+    {
+      "reliability": 0.99,
+      "destinations": [
+        "Earth"
+      ],
+      "tags": [
+        "power"
+      ],
+      "requiredTags": [],
+      "id": "solar",
+      "name": "Solar array",
+      "kind": "power",
+      "explanation": "Illustrative gameplay value; not an engineering specification.",
+      "massKg": 40,
+      "cost": 15,
+      "powerProducedW": 150
+    },
+    {
+      "reliability": 0.99,
+      "destinations": [
+        "Earth"
+      ],
+      "tags": [
+        "communications"
+      ],
+      "requiredTags": [],
+      "id": "radio",
+      "name": "Standard radio",
+      "kind": "communications",
+      "explanation": "Illustrative gameplay value; not an engineering specification.",
+      "massKg": 20,
+      "cost": 12,
+      "powerUsedW": 10,
+      "downlinkMBPerDay": 800
+    },
+    {
+      "reliability": 0.99,
+      "destinations": [
+        "Earth"
+      ],
+      "tags": [
+        "communications"
+      ],
+      "requiredTags": [],
+      "id": "small-radio",
+      "name": "Low-rate radio",
+      "kind": "communications",
+      "explanation": "Illustrative gameplay value; not an engineering specification.",
+      "massKg": 10,
+      "cost": 5,
+      "powerUsedW": 5,
+      "downlinkMBPerDay": 150
+    },
+    {
+      "reliability": 0.99,
+      "destinations": [
+        "Earth"
+      ],
+      "tags": [
+        "propulsion"
+      ],
+      "requiredTags": [],
+      "id": "fuel",
+      "name": "Propellant",
+      "kind": "propulsion",
+      "explanation": "Illustrative gameplay value; not an engineering specification.",
+      "massKg": 30,
+      "cost": 8,
+      "fuelProvided": 40
+    },
+    {
+      "reliability": 0.99,
+      "destinations": [
+        "Earth"
+      ],
+      "tags": [],
+      "requiredTags": [],
+      "id": "shield",
+      "name": "Radiation shielding",
+      "kind": "protection",
+      "explanation": "Illustrative gameplay value; not an engineering specification.",
+      "massKg": 20,
+      "cost": 8,
+      "protection": 1
+    },
+    {
+      "reliability": 0.99,
+      "destinations": [
+        "Earth"
+      ],
+      "tags": [
+        "earth-observation"
+      ],
+      "requiredTags": [
+        "bus",
+        "power",
+        "communications"
+      ],
+      "id": "camera",
+      "compatibleOrbitIds": ["leo"],
+      "name": "High-resolution camera",
+      "kind": "instrument",
+      "explanation": "Illustrative gameplay value; not an engineering specification.",
+      "massKg": 35,
+      "cost": 30,
+      "powerUsedW": 50,
+      "dataMBPerDay": 600,
+      "science": 80
+    },
+    {
+      "reliability": 0.99,
+      "destinations": [
+        "Earth"
+      ],
+      "tags": [
+        "earth-observation"
+      ],
+      "requiredTags": [
+        "bus",
+        "power",
+        "communications"
+      ],
+      "id": "multispectral",
+      "compatibleOrbitIds": ["leo", "high"],
+      "name": "Multispectral imager",
+      "kind": "instrument",
+      "explanation": "Illustrative gameplay value; not an engineering specification.",
+      "massKg": 25,
+      "cost": 24,
+      "powerUsedW": 35,
+      "dataMBPerDay": 400,
+      "science": 65
+    },
+    {
+      "reliability": 0.99,
+      "destinations": [
+        "Earth"
+      ],
+      "tags": [
+        "earth-observation"
+      ],
+      "requiredTags": [
+        "bus",
+        "power",
+        "communications"
+      ],
+      "id": "thermal",
+      "compatibleOrbitIds": ["leo", "high"],
+      "name": "Thermal sensor",
+      "kind": "instrument",
+      "explanation": "Illustrative gameplay value; not an engineering specification.",
+      "massKg": 15,
+      "cost": 18,
+      "powerUsedW": 25,
+      "dataMBPerDay": 250,
+      "science": 50
+    }
+  ],
+  "orbits": [
+    {
+      "id": "leo",
+      "name": "Low Earth orbit",
+      "destination": "Earth",
+      "objectiveIds": [
+        "observe"
+      ],
+      "scienceMultiplier": 1,
+      "downlinkMultiplier": 1,
+      "fuelRequired": 20,
+      "explanation": "A simplified low-altitude observation orbit."
+    },
+    {
+      "id": "high",
+      "name": "High Earth orbit",
+      "destination": "Earth",
+      "objectiveIds": [
+        "observe"
+      ],
+      "scienceMultiplier": 0.65,
+      "downlinkMultiplier": 0.7,
+      "fuelRequired": 35,
+      "explanation": "Greater altitude is modeled with lower observation performance."
+    }
+  ],
+  "launchers": [
+    {
+      "id": "small",
+      "reliability": 0.97,
+      "name": "Small launcher",
+      "destinations": [
+        "Earth"
+      ],
+      "compatibleOrbitIds": [
+        "leo"
+      ],
+      "capacityKg": 200,
+      "cost": 25,
+      "explanation": "Lower cost and payload capacity."
+    },
+    {
+      "id": "large",
+      "reliability": 0.99,
+      "name": "Large launcher",
+      "destinations": [
+        "Earth"
+      ],
+      "compatibleOrbitIds": [
+        "leo",
+        "high"
+      ],
+      "capacityKg": 500,
+      "cost": 45,
+      "explanation": "Higher capacity and wider orbit selection."
+    }
+  ],
+  "hazards": [
+    {
+      "name": "Radiation exposure",
+      "explanation": "Insufficient shielding increases risk.",
+      "requiredProtection": 1,
+      "reliabilityPenalty": 0.15
+    }
+  ],
+  "events": [
+    {
+      "id": "storm",
+      "description": "A solar storm reduced spacecraft reliability.",
+      "probability": 0.2,
+      "scienceMultiplier": 1,
+      "dataMultiplier": 1,
+      "reliabilityMultiplier": 0.85
+    },
+    {
+      "id": "outage",
+      "description": "A ground station outage reduced data return.",
+      "probability": 0.2,
+      "scienceMultiplier": 1,
+      "dataMultiplier": 0.7,
+      "reliabilityMultiplier": 1
+    }
+  ],
+  "requiredSystemTags": [
+    "bus",
+    "power",
+    "communications", "propulsion", "computer", "thermal"
+  ],
+  "rules": {
+    "objectivePoints": 30,
+    "sciencePoints": 20,
+    "engineeringPoints": 20,
+    "efficiencyPoints": 10,
+    "reliabilityPoints": 10,
+    "dataPoints": 10,
+    "warningPenalty": 0.15,
+    "missingSupportFactor": 0.5,
+    "shortageReliabilityFloor": 0.5
+  }
+}
