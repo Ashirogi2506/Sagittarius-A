@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/SagittariusA/Runtime/Data/EarthGarageModel.cs" Link="EarthGarageModel.cs" />
+    <Compile Include="Program.cs" />
+    <None Include="../../Assets/SagittariusA/Resources/FarSignalEarth.json" Link="FarSignalEarth.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
