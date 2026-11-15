@@ -492,6 +492,16 @@ namespace SagittariusA.Gameplay.Flow
             CreateMenuItem(panel.transform, "SETTINGS", 0.36f);
             CreateMenuItem(panel.transform, "CREDITS", 0.29f);
             CreateMenuItem(panel.transform, "EXIT", 0.22f);
+#if UNITY_EDITOR
+            Button moonTest = CreateButton("MoonIsolatedTest", panel.transform, "MOON SURFACE TEST", Color.clear);
+            Stretch(moonTest.GetComponent<RectTransform>(), new Vector2(.055f, .12f), new Vector2(.36f, .19f), Vector2.zero, Vector2.zero);
+            moonTest.GetComponentInChildren<Text>().alignment = TextAnchor.MiddleLeft;
+            moonTest.onClick.AddListener(() => {
+                var owner = parent.GetComponentInParent<GameFlowController>();
+                var moon = owner.GetComponent<MoonPlayableExperience>() ?? owner.gameObject.AddComponent<MoonPlayableExperience>();
+                moon.StartIsolatedTest();
+            });
+#endif
 
             Image statusBar = CreateImage("ProgramStatusAccent", panel.transform, new Color(1f, 0.43f, 0.04f, 1f));
             Stretch(statusBar.rectTransform, new Vector2(0.047f, 0.075f), new Vector2(0.049f, 0.11f), Vector2.zero, Vector2.zero);
