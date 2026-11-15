@@ -22,11 +22,12 @@
         "Earth"
       ],
       "tags": [
-        "bus"
+        "bus", "computer", "thermal"
       ],
       "requiredTags": [],
       "id": "bus",
       "name": "Spacecraft bus",
+      "storageCapacityMB": 1000,
       "kind": "system",
       "explanation": "Illustrative gameplay value; not an engineering specification.",
       "massKg": 100,
@@ -132,6 +133,7 @@
         "communications"
       ],
       "id": "camera",
+      "compatibleOrbitIds": ["leo"],
       "name": "High-resolution camera",
       "kind": "instrument",
       "explanation": "Illustrative gameplay value; not an engineering specification.",
@@ -155,6 +157,7 @@
         "communications"
       ],
       "id": "multispectral",
+      "compatibleOrbitIds": ["leo", "high"],
       "name": "Multispectral imager",
       "kind": "instrument",
       "explanation": "Illustrative gameplay value; not an engineering specification.",
@@ -178,6 +181,7 @@
         "communications"
       ],
       "id": "thermal",
+      "compatibleOrbitIds": ["leo", "high"],
       "name": "Thermal sensor",
       "kind": "instrument",
       "explanation": "Illustrative gameplay value; not an engineering specification.",
@@ -217,6 +221,7 @@
   "launchers": [
     {
       "id": "small",
+      "reliability": 0.97,
       "name": "Small launcher",
       "destinations": [
         "Earth"
@@ -230,6 +235,7 @@
     },
     {
       "id": "large",
+      "reliability": 0.99,
       "name": "Large launcher",
       "destinations": [
         "Earth"
@@ -272,7 +278,7 @@
   "requiredSystemTags": [
     "bus",
     "power",
-    "communications"
+    "communications", "propulsion", "computer", "thermal"
   ],
   "rules": {
     "objectivePoints": 30,

@@ -85,5 +85,52 @@ namespace MissionSimulation.Tests
             score.entries[0].points = -10;
             Assert.AreEqual(0f, score.Total);
         }
+        [Test] public void OverBudgetAndMissingPowerAreReportedWithFixes()
+        {
+            scenario.budget = 50;
+            var design = Design();
+            design.componentIds = new[] { "bus", "radio", "fuel", "shield", "camera" };
+            var result = simulator.Validate(scenario, design);
+            Assert.IsTrue(result.issues.Any(x => x.code == "budget" && x.severity == Severity.Blocking));
+            Assert.IsTrue(result.issues.Any(x => x.code == "power"));
+            Assert.IsTrue(result.issues.Any(x => x.code == "support"));
+            Assert.IsTrue(result.issues.All(x => !string.IsNullOrEmpty(x.suggestedFix)));
+        }
+        [Test] public void IncompatibleInstrumentOrbitIsReported()
+        {
+            var design = Design(); design.orbitId = "high";
+            var result = simulator.Run(scenario, design, 42);
+            Assert.IsTrue(result.validation.issues.Any(x => x.code == "instrument_orbit"));
+            Assert.AreEqual(0f, result.scienceDelivered);
+        }
+        [Test] public void StorageAndLauncherReliabilityAppearInResourceTotals()
+        {
+            var result = simulator.Validate(scenario, Design());
+            Assert.AreEqual(1000f, result.resources.storageCapacityMB);
+            Assert.Less(result.resources.reliability, 0.99f);
+            var camera = scenario.components.First(x => x.id == "camera");
+            camera.dataMBPerDay = 3000;
+            Assert.IsTrue(simulator.Validate(scenario, Design()).issues.Any(x => x.code == "storage"));
+        }
+        [Test] public void UiFacadeLoadsCalculatesAndReturnsCompleteResult()
+        {
+            var service = new MissionSimulationService();
+            var loaded = service.LoadMission("earth-observation"); loaded.events = new MissionEvent[0];
+            var design = Design();
+            Assert.AreEqual(245f, service.CalculateResources(loaded, design).massKg);
+            Assert.IsFalse(service.ValidateDesign(loaded, design).Any(x => x.severity == Severity.Blocking));
+            var result = service.RunSimulation(loaded, design, 42);
+            Assert.IsNotEmpty(result.summary);
+            CollectionAssert.Contains(result.completedObjectives, "observe");
+            Assert.Throws<System.ArgumentException>(() => service.LoadMission("not-a-mission"));
+        }
+        [Test] public void InvalidNumericValuesAndDuplicateComponentIdsBlockSimulation()
+        {
+            scenario.components[0].massKg = float.NaN;
+            Assert.IsFalse(simulator.Validate(scenario, Design()).CanLaunch);
+            scenario.components[0].massKg = 100;
+            scenario.components[1].id = scenario.components[0].id;
+            Assert.IsFalse(simulator.Validate(scenario, Design()).CanLaunch);
+        }
     }
 }

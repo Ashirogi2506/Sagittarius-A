@@ -4,9 +4,21 @@ This branch contains a reusable Earth-observation prototype and a separate draft
 
 ## Earth-observation prototype
 
-Use the existing `MissionSimulation` namespace. Load `Resources/earth_observation.json` via Unity's `Resources.Load<TextAsset>("earth_observation")`, then call `MissionScenarioLoader.FromJson(asset.text)`. Construct a `PlayerDesign` with orbit, launcher and component IDs. Call `MissionSimulator.Validate(scenario, design)` for `resources`, `issues` and `CanLaunch`; call `Run(scenario, design, seed)` to obtain the outcome, score entries, event descriptions and explanations. The same input and seed are deterministic within the same runtime. Display each warning/blocking issue and each score entry's points, maximum and reason.
+Use the existing `MissionSimulation` namespace. The public facade loads `Resources/earth_observation.json` and exposes the engine without requiring a scene:
 
-This older prototype is distinct from the newer campaign's crewed Earth launch catalog. Its rates and fuel are abstract units. It does not yet implement every requested field (notably storage, separate orbit compatibility per instrument, launcher reliability and suggested fixes); do not present it as the completed final simulator.
+```csharp
+var service = new MissionSimulationService();
+var mission = service.LoadMission("earth-observation");
+var design = new PlayerDesign { orbitId = "leo", launcherId = "large",
+    componentIds = new[] { "bus", "solar", "radio", "fuel", "shield", "camera" } };
+ResourceBudget totals = service.CalculateResources(mission, design);
+var issues = service.ValidateDesign(mission, design);
+SimulationResult result = service.RunSimulation(mission, design, 42);
+```
+
+Call `ValidateDesign` when a selection changes. Display each issue's severity, message and suggested fix; show `summary`, objective IDs, score entries, events and explanations from the result. `Validate` and `Run` on `MissionSimulator` remain available for existing consumers. The same input and seed are deterministic within the same runtime.
+
+This older prototype is distinct from the newer campaign's crewed Earth launch catalog. Its rates and fuel are abstract units. Component mass already includes its loaded propellant; adding the abstract fuel count again as kilograms would double-count it. The bus provides draft onboard storage; a daily surplus larger than that storage produces a warning. Data returned remains the simplified aggregate of production and downlink over the duration, rather than a detailed buffer simulation. Launcher and component reliability are multiplied; for legacy data, an omitted launcher reliability is treated as no modifier. Instrument orbit restrictions, objective orbit and destination are checked separately. Reliability values represent the configured whole mission duration, not independent daily probabilities. All such values are provisional game design.
 
 ## Campaign Earth launch
 
@@ -16,9 +28,21 @@ Load `Resources/ FarSignal.Earth.proposed.json` without the space: `Resources.Lo
 
 ## Mars and Ganymede campaign draft
 
-`CampaignState` is serializable with `JsonUtility`. `CampaignProgress.OrbiterMass` uses the draft 300 kg Mars cradle, and `SelectModules` invalidates the bench test and clamps when a module changes. `CanLoad` and `CanTravel` expose the currently implemented gates. `UseSpareForAntenna` is idempotent on a restored state; manual recovery does not spend a spare. `SaveReading` records the two site IDs, their fictional dose rates, timestamp and image ID. `AcceptComparison`, `ReturnToOrbit`, `Deploy`, `SendWindow` and `Acknowledge` cover the basic finale gates and packet retries. The light antenna sends 10 seconds per window; the aligned directional antenna sends 14. Data packet IDs are `health`, `sample`, and `full-graph`.
+`CampaignProgress.CreateFromCheckpoint` verifies and copies the existing Earth checkpoint, commander and cargo; `CommitLunarDescent` uses the existing descent operation and fuel record. Pole-7 route, supply delivery, relay, optional beacon battery, Mars approach and return-to-ship gates are represented by the corresponding `CampaignProgress` methods; delivery removes the panel but retains the kit. `CampaignProgress.OrbiterMass` uses the draft 300 kg Mars cradle. Module or connector changes invalidate the bench test and clamps; `TryBenchTest`, `SeatOrbiter`, `SetClamp`, `ReceiveDeploymentPlan`, `CanLoad`, and `CanTravel` expose these gates. A missing data connection cannot pass a bench test. `UseSpareForAntenna` is idempotent on a restored state; manual recovery does not spend a spare. Mars transit packet retries use `SendMarsTransitWindow` and `MarsArrivalConfirmed`. `LandOnGanymede` and `SaveReading` record the two site IDs, their fictional dose rates, timestamp and image ID. `AcceptComparison`, `ReturnToOrbit`, `Deploy`, `HoldAntennaAlignment`, `SendWindow` and `Acknowledge` cover the basic finale gates and packet retries. The light antenna sends 10 seconds per window; the aligned directional antenna sends 14. Data packet IDs are `health`, `sample`, and `full-graph`.
 
-Persist the **whole** state and operation outcome atomically after each successful action, before acknowledging completion in UI. These methods alone do not provide file I/O, transactional persistence, protection from simultaneous callers, scene binding, timestamp generation, validated bench test interactions or durable state migration. The UI/gameplay integration must validate and set the bench, clamp, antenna alignment and plan flags from real gameplay events; public flags are not an authoritative anti-tamper boundary. The complete campaign, every requested mission transition, test saves, final report integration and full end-to-end Unity playthrough remain unfinished.
+Use `CampaignSaveStore.ForSlot(slotId)` (or its constructor with an absolute path) for a new save, call `Create(initialState)` once, and `Load()` to resume. `Apply(operationId, actionKey, mutation)` reloads under an exclusive lock, writes the complete state and operation record to a flushed temporary file, and atomically replaces the save before returning `Applied`. Use a stable operation ID for each logical action and an action key that includes all relevant parameters; retries with the same ID and key return `AlreadyApplied`, while ID reuse with another key returns `OperationConflict`. Rejected operations do not change disk. Corrupt or unsupported saves throw instead of being replaced; handle IO errors and lock contention in the caller. File system and platform guarantees still apply; no cloud sync or cross-device conflict resolution is provided.
+
+```csharp
+var store = CampaignSaveStore.ForSlot("slot-1");
+// On a new run only: store.Create(CampaignProgress.CreateFromCheckpoint(scenario, checkpoint));
+var result = store.Apply("run-1-descent", "descent:main:3",
+    state => CampaignProgress.CommitLunarDescent(state, scenario, "main", 3, "run-1-descent"));
+// Advance only on Applied or AlreadyApplied; retain IDs across retries and reloads.
+```
+
+The existing gameplay branch has its own draft save/controller and is not wired to this store yet. UI/gameplay must call these methods from actual events and pass confirmed connectors, locks, target alignment and timestamps. Public serialized flags are not an authoritative anti-tamper boundary. Scene binding, migrating old saves, remaining chapter transitions, the final report integration and a full campaign playthrough remain unfinished.
+
+Four synthetic save envelopes are available under `Assets/MissionSimulation/Tests/Fixtures`: `basic` starts with the basic build, `optional` represents a used spare and directional antenna, `blocked` exceeds the cradle by 5 kg, and `interrupted` has delivered only the health packet. These isolate rule tests and do not include a real Earth checkpoint or replace the gameplay team's save format. Copy a fixture to a disposable slot, never over a real player save.
 
 ## Testing
 
