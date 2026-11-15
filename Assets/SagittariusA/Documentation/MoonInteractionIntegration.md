@@ -4,21 +4,17 @@
 
 ## Scene bridge
 
-Implement `IMoonInteractionDriver` on one `MonoBehaviour` in the Moon scene. Find the persistent `MoonStageController` and call `RegisterDriver(this)` after the scene is ready. Call `UnregisterDriver(this)` before teardown.
+Add `MoonSceneConnector` to a Moon scene object. The campaign scene loader must keep the existing `MoonStageController` alive and call `connector.Bind(controller)` after the Moon scene loads. Unbinding is automatic on destruction. The loader and scene transition are not implemented yet; do not create a second controller in the Moon scene.
 
-`Initialize` receives a `MoonStageContext` and callback. Bind only the IDs in `availableInteractionIds`. After each accepted callback, `UpdateContext` supplies a fresh snapshot and the next allowed IDs. Treat all objects as unavailable until their exact ID appears.
+Read `connector.Context` and use `connector.IsAvailable(id)` to enable targets. The Inspector event `onContextChanged` fires when the context is initialized or updated. Treat objects as unavailable until their exact ID appears. Refresh visual state from the context after loading a save.
 
 Report an interaction with the supplied run ID:
 
 ```csharp
-report(new MoonInteractionResult {
-    runId = context.runId,
-    interactionId = MoonInteractionIds.SwitchCartOff,
-    completed = true
-});
+connector.Interact(MoonInteractionIds.SwitchCartOff);
 ```
 
-For a dust patch, report the actively held frame time as `elapsedSeconds`. Call `MoonStageController.EndPatchHold()` when the key is released or the player looks away. Do not send total session time.
+For a dust patch, call `connector.HoldPatch(id, Time.deltaTime)` once per frame while held, and `connector.EndHold()` on release, target loss or switching patches. Do not send total session time. Inspect updated `Context.cart` to drive visual effects; a callback is a request and does not itself prove an action was accepted.
 
 ## Implemented sequence
 
