@@ -21,6 +21,8 @@ namespace SagittariusA.Gameplay.Flow
         {
             var session = GetComponent<EarthGameplaySession>() ?? gameObject.AddComponent<EarthGameplaySession>();
             session.Initialize();
+            var moon = GetComponent<MoonStageController>() ?? gameObject.AddComponent<MoonStageController>();
+            moon.Connect(session);
             RebuildViewMap();
 
             if (views.Count == 0)

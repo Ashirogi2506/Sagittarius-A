@@ -54,4 +54,4 @@ It checks the exact catalog totals, red and yellow gates, cargo locks/overlap/ad
 
 Far Signal > Run Earth Session Checks exercises the real Unity session with an editor-only fake runner and in-memory save: cancellation, stale/duplicate callbacks, launch gating, in-flight ordering, one-time Moon handoff and reload. It never registers on the player's session or changes the player's save.
 
-Full team integration still needs the actual minigame scenes, Moon scene resume and authoritative save transaction tests. Do not mark those integrated until the teammate modules are present.
+MoonStageController now owns the first Moon gameplay slice: idempotent descent fuel spending, pre-launch restart requests, saved Pole-7 cart repair state and a strict 3D interaction boundary. See MoonInteractionIntegration.md. Full team integration still needs the actual minigame scenes and an authoritative campaign save transaction. Do not mark the 3D interaction integrated until the teammate module is present.
