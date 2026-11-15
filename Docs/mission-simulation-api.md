@@ -42,6 +42,27 @@ var result = store.Apply("run-1-descent", "descent:main:3",
 
 The existing gameplay branch has its own draft save/controller and is not wired to this store yet. UI/gameplay must call these methods from actual events and pass confirmed connectors, locks, target alignment and timestamps. Public serialized flags are not an authoritative anti-tamper boundary. Scene binding, migrating old saves, remaining chapter transitions, the final report integration and a full campaign playthrough remain unfinished.
 
+### Local gateway draft for gameplay integration
+
+`CampaignDraftGateway` wraps the store in typed operations for the Pole-7, Mars and Ganymede milestones. It is an integration draft, not a scene component: it does not subscribe to gameplay events, advance scenes, display dialogue, or automatically create or migrate a player's save. The gameplay owner must decide where it connects to the existing controller and save format.
+
+```csharp
+var campaign = CampaignDraftGateway.ForSlot("slot-1");
+// New run only, after the Earth checkpoint has been verified:
+campaign.CreateFromEarthCheckpoint(scenario, checkpoint);
+// For an existing slot use campaign.Load(); do not call Create again.
+var result = campaign.ConfirmDescent("run-1-descent", scenario, "main", 3f);
+// Advance only if result.status is Applied or AlreadyApplied.
+```
+
+Keep one unique operation ID per logical action and reuse the same ID and inputs when retrying after an interruption. Use a new ID for a new action; reusing an ID with different action parameters returns `OperationConflict`. For descent, the operation key contains the pad and arrival time, not the scenario object: keep the same verified scenario for a run. A `Rejected` action was not saved and must not advance the UI; handle IO and lock errors before acknowledging an action. Use separate IDs for successive transmission windows and inspect the returned snapshot for the actual received packets.
+
+The gameplay controller must call `SetBenchConnections` whenever either cable actually changes, even if a subsequent bench test fails. Connector or module changes invalidate the prior test; call `CompleteBenchTest` after the physical test succeeds. Similarly, pass actual clamp states, release-point and crew readiness, reading times and images. `AlignDirectionalAntenna` expects the controller to verify a continuous in-target hold of at least one second before calling it; the gateway does not measure that hold. The gateway keeps the current landing-fuel behavior unchanged while the team lead decides the conflicting requirement.
+
+For resume guidance, call `CampaignResumeGuide.GetNextAction(campaign.Load().state)`. Its `action` is an advisory `CampaignNextAction`, and `remainingIds` identifies missing required site or packet IDs where applicable. Both survey sites may be visited in either order; optional packets are not required for completion. The guide does not modify the save, validate its consistency, replace the actual interaction gates, choose a scene or display UI. It starts from the saved Earth checkpoint/descent handoff, not the Earth build menus. Handle invalid or incompatible saves separately.
+
+`Docs/IntegrationExamples` includes reviewed-but-not-wired examples for the gameplay branch's completed Earth snapshot. Read their README before integrating: team-owned DTOs and the existing Moon controller impose sequencing, missing-input, and transaction-ownership constraints.
+
 Four synthetic save envelopes are available under `Assets/MissionSimulation/Tests/Fixtures`: `basic` starts with the basic build, `optional` represents a used spare and directional antenna, `blocked` exceeds the cradle by 5 kg, and `interrupted` has delivered only the health packet. These isolate rule tests and do not include a real Earth checkpoint or replace the gameplay team's save format. Copy a fixture to a disposable slot, never over a real player save.
 
 ## Testing
