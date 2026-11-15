@@ -21,6 +21,22 @@ namespace MissionSimulation.Tests
         {
             var report = Check(3); Assert.IsTrue(report.CanLaunch); Assert.AreEqual(93000000L, report.costUsd); Assert.AreEqual(9570f, report.payloadKg); Assert.AreEqual(10100f, report.launchCapacityKg);
         }
+        [Test] public void OverweightBuildCanBeFixedWithN2()
+        {
+            design.cargoModuleId = "c2"; design.fairingId = "f2";
+            design.cargo = new[] { new CargoPlacement { cargoId = "panel", startSlot = 0 }, new CargoPlacement { cargoId = "kit", startSlot = 2 }, new CargoPlacement { cargoId = "fuel", startSlot = 3 } };
+            var simulator = new EarthLaunchSimulator();
+            var overweight = simulator.Validate(scenario, design);
+            Assert.AreEqual(99000000L, overweight.costUsd);
+            Assert.AreEqual(10320f, overweight.payloadKg);
+            Assert.AreEqual(-340f, overweight.payloadMarginKg);
+            Assert.IsFalse(overweight.CanLaunch);
+            design.nozzleId = "n2";
+            var fixedDesign = simulator.Validate(scenario, design);
+            Assert.AreEqual(101000000L, fixedDesign.costUsd);
+            Assert.AreEqual(10f, fixedDesign.payloadMarginKg);
+            Assert.IsTrue(fixedDesign.CanLaunch);
+        }
         [Test] public void MissingPowerTestAndUnlockedCargoBlockLaunch()
         {
             power.SetRadio(false); packing = new CargoPackingMinigame("c1",3); packing.Place("panel",0); packing.Place("kit",2); packing.Lock("kit");

@@ -1,0 +1,54 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using MissionSimulation.FarSignal;
+using Team = SagittariusA.Gameplay.Data;
+
+namespace MissionSimulation.TeamIntegration
+{
+    // Data bridge for a COMPLETED Earth check snapshot. It does not register itself,
+    // change the campaign, save anything, or replace the team's simulation adapter.
+    // The gameplay team must review sequencing and issue mapping before it is wired in.
+    public static class EarthCompletedSnapshotMapper
+    {
+        public static bool TryMap(Team.EarthCatalog catalog, Team.EarthBuild build, Team.EarthChecks checks,
+            out EarthScenario scenario, out EarthDesign design, out string error)
+        {
+            scenario = null; design = null; error = null;
+            if (catalog == null || build == null || checks == null || build.parts == null || build.parts.Length != 6 || build.cargo == null || checks.placements == null)
+            { error = "Catalog, six selected parts, cargo, and completed checks are required."; return false; }
+            if (catalog.launchers == null || catalog.nozzles == null || catalog.fairings == null || catalog.engines == null || catalog.cargoModules == null || catalog.powerSystems == null || catalog.cargo == null || catalog.landingMap == null ||
+                new[] { catalog.launchers, catalog.nozzles, catalog.fairings, catalog.engines, catalog.cargoModules, catalog.powerSystems, catalog.cargo }.Any(g => g.Any(x => x == null)) || catalog.landingMap.Any(x => x == null))
+            { error = "The team's catalog is incomplete."; return false; }
+            if (build.parts.Any(string.IsNullOrWhiteSpace) || build.cargo.Any(string.IsNullOrWhiteSpace) || build.cargo.Distinct().Count() != build.cargo.Count ||
+                checks.placements.Any(x => x == null || string.IsNullOrWhiteSpace(x.itemId) || !x.locked) || checks.placements.Select(x => x.itemId).Distinct().Count() != checks.placements.Count ||
+                checks.placements.Count != build.cargo.Count || checks.placements.Any(x => !build.cargo.Contains(x.itemId)))
+            { error = "Every selected cargo item needs exactly one locked placement."; return false; }
+            if (!checks.powerTestCompleted || !checks.cabinOn || !checks.radioOn || (build.cargo.Contains("laser") && !checks.laserTested) || string.IsNullOrWhiteSpace(checks.padId) ||
+                float.IsNaN(checks.arrivalMinute) || float.IsInfinity(checks.arrivalMinute) || checks.arrivalMinute < 0 || checks.arrivalMinute > 10)
+            { error = "Completed in-flight power and landing checks are required."; return false; }
+            var candidate = new EarthScenario {
+                title = catalog.title, missionId = catalog.missionId, nextMissionId = catalog.nextMissionId,
+                budgetUsd = catalog.budgetUsd, busCostUsd = catalog.busCostUsd, busMassKg = catalog.busMassKg,
+                busPowerKw = catalog.busPowerKw, minimumBatteryKwh = catalog.minimumBatteryKwh, minimumFuelUnits = catalog.minimumFuelUnits,
+                launchers = catalog.launchers.Select(x => new Launcher { id=x.id, name=x.name, costUsd=x.costUsd, basePayloadKg=x.basePayloadKg, nozzleMounts=x.nozzleMounts == null ? null : (string[])x.nozzleMounts.Clone() }).ToArray(),
+                nozzles = catalog.nozzles.Select(x => new Nozzle { id=x.id, name=x.name, costUsd=x.costUsd, mount=x.mount, payloadGainKg=x.payloadGainKg }).ToArray(),
+                fairings = catalog.fairings.Select(x => new Fairing { id=x.id, name=x.name, costUsd=x.costUsd, maxModuleSize=x.maxModuleSize, payloadLossKg=x.payloadLossKg }).ToArray(),
+                engines = catalog.engines.Select(x => new Engine { id=x.id, name=x.name, costUsd=x.costUsd, massKg=x.massKg, fuelUnits=x.fuelUnits, freeLandingCorrections=x.freeLandingCorrections }).ToArray(),
+                cargoModules = catalog.cargoModules.Select(x => new CargoBay { id=x.id, name=x.name, costUsd=x.costUsd, massKg=x.massKg, size=x.size, slots=x.slots }).ToArray(),
+                powerSystems = catalog.powerSystems.Select(x => new PowerSystem { id=x.id, name=x.name, costUsd=x.costUsd, massKg=x.massKg, maxPowerKw=x.maxPowerKw, batteryKwh=x.batteryKwh }).ToArray(),
+                cargo = catalog.cargo.Select(x => new Cargo { id=x.id, name=x.name, costUsd=x.costUsd, massKg=x.massKg, extraPowerKw=x.extraPowerKw, extraFuelUnits=x.extraFuelUnits, slots=x.slots, required=x.required, adjacentSlots=x.adjacentSlots }).ToArray(),
+                landingMap = catalog.landingMap.Select(x => new LandingPad { id=x.id, name=x.name, description=x.description, openMinute=x.openMinute, closeMinute=x.closeMinute, fuelUnits=x.fuelUnits }).ToArray()
+            };
+            var selection = new EarthDesign {
+                launcherId=build.parts[0], nozzleId=build.parts[1], fairingId=build.parts[2], engineId=build.parts[3], cargoModuleId=build.parts[4], powerSystemId=build.parts[5], landingPadId=checks.padId,
+                cargo=checks.placements.Select(x => new MissionSimulation.FarSignal.CargoPlacement { cargoId=x.itemId, startSlot=x.firstSlot }).ToArray()
+            };
+            // No "has arrival time" flag or laser usable/tripped state exists in the
+            // team's current DTO; do not invent those values or create a checkpoint.
+            var report = new EarthLaunchSimulator().Validate(candidate, selection);
+            if (!report.CanLaunch) { error = "The completed snapshot did not pass simulation validation: " + string.Join("; ", report.issues.Where(x => x.level == IssueLevel.Error).Select(x => x.explanation).ToArray()); return false; }
+            scenario=candidate; design=selection; return true;
+        }
+    }
+}

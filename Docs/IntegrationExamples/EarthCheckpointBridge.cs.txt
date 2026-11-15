@@ -1,0 +1,36 @@
+using System;
+using System.Linq;
+using MissionSimulation.FarSignal;
+using MissionSimulation.Minigames;
+using Team = SagittariusA.Gameplay.Data;
+
+namespace MissionSimulation.TeamIntegration
+{
+    // Forward-only handoff draft: invoke after the team's in-flight checks and before
+    // lunar descent. It never reads/writes the team's saves or advances gameplay.
+    public static class EarthCheckpointBridge
+    {
+        public static bool TryPrepare(Team.EarthCatalog catalog, Team.EarthBuild build, Team.EarthChecks checks,
+            string runId, CommanderIdentity commander, bool arrivalTimeConfirmed, EarthPowerTestState observedPower,
+            out EarthScenario scenario, out PreLaunchCheckpoint checkpoint, out string error)
+        {
+            scenario = null; checkpoint = null; error = null;
+            if (!arrivalTimeConfirmed) { error = "An explicitly confirmed arrival time is required."; return false; }
+            if (observedPower == null || checks == null || observedPower.cabinOn != checks.cabinOn || observedPower.radioOn != checks.radioOn)
+            { error = "An observed power-test state matching the team's checks is required."; return false; }
+            EarthScenario mapped; EarthDesign design;
+            if (!EarthCompletedSnapshotMapper.TryMap(catalog, build, checks, out mapped, out design, out error)) return false;
+            var bays = mapped.cargoModules.Where(x => x.id == design.cargoModuleId).ToArray();
+            if (bays.Length != 1) { error = "The selected cargo bay is ambiguous or missing."; return false; }
+            var cargo = new CargoPackingState {
+                bayId = design.cargoModuleId, slotCount = bays[0].slots,
+                items = checks.placements.Select(x => new PackedCargo { id=x.itemId, startSlot=x.firstSlot, locked=x.locked }).ToList()
+            };
+            var plan = new LandingPlan { padId=checks.padId, hasArrivalMinute=true, arrivalMinute=checks.arrivalMinute };
+            var prepared = new PreLaunchCheckpointService().Create(runId, commander, mapped, design, cargo, observedPower, plan);
+            if (!prepared.success) { error = prepared.explanation; return false; }
+            scenario = mapped; checkpoint = prepared.checkpoint;
+            return true;
+        }
+    }
+}

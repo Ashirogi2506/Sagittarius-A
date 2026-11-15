@@ -1,0 +1,1 @@
+{"version":1,"revision":1,"state":{"runId":"fixture-optional","commanderName":"Нара","antenna":"directional","shield":"basic","sensorMode":"standard","spares":0,"inventory":["panel","kit","laser"],"antennaRecovered":true,"usedSpare":true,"receivedPackets":[],"marsTransitPackets":[],"surveyRecords":[]},"operations":[{"id":"fixture-use-spare","actionKey":"use-spare"}]}

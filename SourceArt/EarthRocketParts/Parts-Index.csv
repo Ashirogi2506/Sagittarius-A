@@ -1,0 +1,31 @@
+﻿ID,Category,Game name,Source object,File,Grouped objects
+l1,launchers,Light launcher,launcher_l1_light,L1-Light-launcher.blend,4
+l2,launchers,Standard launcher,launcher_l2_standard,L2-Standard-launcher.blend,4
+l3,launchers,Heavy launcher,launcher_l3_heavy,L3-Heavy-launcher.blend,4
+l4,launchers,Dual-mount launcher,launcher_l4_dualmount,L4-Dual-mount-launcher.blend,5
+n1,nozzles,Short A nozzle,nozzle_n1_shortA,N1-Short-A-nozzle.blend,2
+n2,nozzles,Long A nozzle,nozzle_n2_longA,N2-Long-A-nozzle.blend,2
+n3,nozzles,Wide B nozzle,nozzle_n3_wideB,N3-Wide-B-nozzle.blend,2
+n4,nozzles,Light B nozzle,nozzle_n4_lightB,N4-Light-B-nozzle.blend,2
+f1,fairings,Narrow cover,fairing_f1_narrow,F1-Narrow-cover.blend,8
+f2,fairings,Standard cover,fairing_f2_standard,F2-Standard-cover.blend,8
+f3,fairings,Wide cover,fairing_f3_wide,F3-Wide-cover.blend,8
+f4,fairings,Light wide cover,fairing_f4_lightwide,F4-Light-wide-cover.blend,8
+e1,engines,Standard engine,engine_e1_standard,E1-Standard-engine.blend,3
+e2,engines,Long-trip engine,engine_e2_longtrip,E2-Long-trip-engine.blend,3
+e3,engines,Light engine,engine_e3_light,E3-Light-engine.blend,3
+e4,engines,Precision engine,engine_e4_precision,E4-Precision-engine.blend,3
+c1,cargoModules,Small bay,bay_c1_small,C1-Small-bay.blend,6
+c2,cargoModules,Medium bay,bay_c2_medium,C2-Medium-bay.blend,7
+c3,cargoModules,Large bay,bay_c3_large,C3-Large-bay.blend,9
+c4,cargoModules,Light large bay,bay_c4_lightlarge,C4-Light-large-bay.blend,9
+p1,powerSystems,Standard power,power_p1_standard,P1-Standard-power.blend,5
+p2,powerSystems,High power,power_p2_high,P2-High-power.blend,5
+p3,powerSystems,Long battery life,power_p3_longbattery,P3-Long-battery-life.blend,5
+p4,powerSystems,Light power,power_p4_light,P4-Light-power.blend,5
+panel,cargo,P-4 power panel,cargo_panel_p4,PANEL-P-4-power-panel.blend,2
+kit,cargo,Insulated repair kit,cargo_kit_insulated,KIT-Insulated-repair-kit.blend,2
+laser,cargo,Laser cutter,cargo_laser_cutter,LASER-Laser-cutter.blend,3
+battery,cargo,Portable battery,cargo_battery_portable,BATTERY-Portable-battery.blend,2
+spares,cargo,Spare parts box,cargo_spares_spare,SPARES-Spare-parts-box.blend,2
+fuel,cargo,Extra flight fuel,cargo_fuel_extra,FUEL-Extra-flight-fuel.blend,2
