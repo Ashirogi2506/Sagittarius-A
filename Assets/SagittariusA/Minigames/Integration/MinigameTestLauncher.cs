@@ -17,6 +17,7 @@ namespace SagittariusA.Gameplay.Minigames
         private bool timed = true, allowCancel = true;
         private Text settingsText, resultText;
         private string[] ids;
+        private Transform launcherRoot;
 
         private void Start()
         {
@@ -31,7 +32,7 @@ namespace SagittariusA.Gameplay.Minigames
             var canvasGo = new GameObject("LauncherCanvas", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             canvasGo.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
             var scaler = canvasGo.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution = new Vector2(1920, 1080); scaler.matchWidthOrHeight = .5f;
-            var root = Ui.Rect(canvasGo.transform, "Root", 0, 0, 1920, 1080); Ui.Stretch(root);
+            var root = Ui.Rect(canvasGo.transform, "Root", 0, 0, 1920, 1080); Ui.Stretch(root); launcherRoot = root;
             var panel = Ui.Panel(root, "Launcher", 160, 90, 1600, 900, MinigameTheme.Panel);
             var p = panel.transform;
             Ui.Label(p, "FARSIGNAL · MINIGAME TEST LAUNCHER", 48, 40, 1200, 24, 16, MinigameTheme.Orange, TextAnchor.UpperLeft, FontStyle.Bold);
@@ -41,7 +42,7 @@ namespace SagittariusA.Gameplay.Minigames
             {
                 int index = i;
                 var entry = MinigameManager.Instance.Registry.Entries.First(e => e.Id == ids[i]);
-                var b = Ui.Button(p, $"{entry.Definition.MissionLabel}: {entry.Definition.Title}", 48, 150 + i * 84, 760, 70, () => Launch(index), Ui.ButtonStyle.Secondary, 21);
+                var b = Ui.Button(p, $"{entry.Definition.MissionLabel}: {entry.Definition.Title}", 48, 150 + i * 84, 760, 70, () => ShowBriefing(index), Ui.ButtonStyle.Secondary, 21);
                 if (first == null) first = b;
             }
             Ui.Label(p, "SETTINGS", 860, 150, 300, 22, 16, MinigameTheme.SoftGray, TextAnchor.UpperLeft, FontStyle.Bold);
@@ -60,6 +61,37 @@ namespace SagittariusA.Gameplay.Minigames
         private static int Order(string id) => id.StartsWith("earth") ? 0 : id.StartsWith("moon") ? 1 : id.StartsWith("mars") ? 2 : id.StartsWith("jupiter") ? 3 : 4;
 
         private void Show() => settingsText.text = $"Difficulty {difficulty}   ·   Seed {seed}   ·   {(timed ? "Timed" : "Untimed")}   ·   {(allowCancel ? "Cancel allowed" : "No cancel")}";
+
+        private static string Briefing(string id) => id switch
+        {
+            "earth-image-calibration" => "Match the reference image by adjusting focus and exposure, then choose the correct spectral band. Confirm each calibration when the preview matches.",
+            "moon-power-routing" => "Connect power sources to the three critical systems. Select adjacent grid points to lay cable, avoid blocked terrain, and energize the grid when ready.",
+            "mars-power-management" => "Keep communications, thermal control and navigation powered through the dust storm. Switch off nonessential systems when solar power falls.",
+            "jupiter-shield-allocation" => "Protect the spacecraft before the radiation surge. Select a shield, then select a system; match each risk level while staying within the mass budget.",
+            _ => "Read the mission instructions and complete the task."
+        };
+
+        private void ShowBriefing(int index)
+        {
+            var entry = MinigameManager.Instance.Registry.Entries.First(e => e.Id == ids[index]);
+            var previous = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+            var backdrop = Ui.Panel(launcherRoot, "BriefingBackdrop", 0, 0, 1920, 1080, MinigameTheme.Backdrop, null, true);
+            Ui.Stretch(backdrop.rectTransform);
+            var panel = Ui.Panel(backdrop.transform, "Briefing", 400, 270, 1120, 540, MinigameTheme.Panel, null, true);
+            Ui.Label(panel.transform, "MISSION BRIEFING", 48, 36, 1000, 28, 18, MinigameTheme.Orange, TextAnchor.UpperLeft, FontStyle.Bold);
+            Ui.Label(panel.transform, entry.Definition.Title, 48, 80, 1024, 60, 36, MinigameTheme.WarmWhite, TextAnchor.UpperLeft, FontStyle.Bold);
+            Ui.Label(panel.transform, Briefing(entry.Id), 48, 166, 1024, 190, 25, MinigameTheme.WarmWhite);
+            Ui.Label(panel.transform, "The timer starts when you select Start.", 48, 375, 900, 30, 18, MinigameTheme.SoftGray);
+            Ui.Button(panel.transform, "Back", 48, 450, 200, 58, () => {
+                Destroy(backdrop.gameObject);
+                if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(previous);
+            });
+            var start = Ui.Button(panel.transform, "Start", 850, 450, 220, 58, () => {
+                Destroy(backdrop.gameObject);
+                Launch(index);
+            }, Ui.ButtonStyle.Primary);
+            if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(start.gameObject);
+        }
 
         private void Launch(int index)
         {

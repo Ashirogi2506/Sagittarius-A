@@ -49,7 +49,7 @@ namespace SagittariusA.Minigames.JupiterShieldAllocation
             var risks = new[] { RiskLevel.High, rng.Next(2) == 0 ? RiskLevel.Medium : RiskLevel.High, (RiskLevel)(1 + rng.Next(3)), (RiskLevel)(2 + rng.Next(2)) };
             if (rng.Next(2) == 0) (risks[0], risks[1]) = (risks[1], risks[0]);
             for (int i = 0; i < zones.Count; i++) zones[i].Risk = risks[i];
-            MassBudget = MinimumMass + (level == 1 ? 3 : level == 2 ? 2 : 1);
+            MassBudget = MinimumMass + (level == 1 ? 2 : level == 2 ? 1 : 0);
         }
 
         // Lightest mass that protects every zone adequately.

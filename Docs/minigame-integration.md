@@ -5,9 +5,9 @@ This document covers the short 2D mission tasks that open during mission events:
 | ID | Mission | Task | Default time |
 |---|---|---|---|
 | `earth-image-calibration` | Earth observation | Satellite Image Calibration | 60 s |
-| `moon-power-routing` | Moon exploration | Lunar Power Grid Routing | 75 s |
+| `moon-power-routing` | Moon exploration | Lunar Power Grid Routing | 100 s |
 | `mars-power-management` | Mars mission | Dust Storm Power Management | 45 s storm |
-| `jupiter-shield-allocation` | Jupiter orbiter | Radiation Shield Allocation | 60 s planning |
+| `jupiter-shield-allocation` | Jupiter orbiter | Radiation Shield Allocation | 50 s planning |
 
 The project uses Unity 6000.6.9f1, URP, uGUI 2.6 with legacy `Text`, and the Input System only (`activeInputHandler: 1`).
 
@@ -173,9 +173,9 @@ The same seed and difficulty always produce the same setup. Results depend only 
 
 | Difficulty | Earth tolerance | Moon layout | Mars | Jupiter mass slack |
 |---|---|---|---|---|
-| 1 | 0.08 | 7×5 "Crater rim" | essential tolerance 3 s | +3 |
-| 2 | 0.07 | 8×6 "Boulder field" | deeper dips, 2.5 s | +2 |
-| 3 | 0.06 | 9×6 "Shadowed ridge" | deepest dips, 2 s | +1 |
+| 1 | 0.08 | 7×5 "Crater rim" | essential tolerance 3 s | +2 |
+| 2 | 0.07 | 8×6 "Boulder field" | deeper dips, 2.5 s | +1 |
+| 3 | 0.06 | 9×6 "Shadowed ridge" | deepest dips, 2 s | +0 |
 
 On the Moon, an odd seed mirrors the layout. Every layout has a reference solution that the tests replay.
 
