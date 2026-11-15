@@ -18,7 +18,7 @@ namespace SagittariusA.Minigames.MoonPowerRouting
             Id = IdValue, MissionId = "moon", MissionLabel = "Moon exploration", Title = "Lunar Power Grid Routing",
             Instruction = "Connect the power source to every critical lunar system without exceeding the cable limit.",
             EducationalSubtitle = "Each source can only feed a limited number of systems. Critical systems are served first.",
-            DefaultTimeLimitSeconds = 75f, EducationalNote = PowerGridRules.EducationalNote };
+            DefaultTimeLimitSeconds = 100f, EducationalNote = PowerGridRules.EducationalNote };
         public override string Id => IdValue;
 
         private PowerGridRules rules;

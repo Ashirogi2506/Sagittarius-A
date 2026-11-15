@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Collections.Generic;
 using SagittariusA.Gameplay.Data;
 using UnityEngine;
 
@@ -46,6 +47,7 @@ namespace SagittariusA.Gameplay.Flow
         public EarthBuild build = new EarthBuild();
         public EarthChecks checks = new EarthChecks();
         public bool launched, transitCompleted;
+        public List<string> playedDialogueIds = new List<string>();
     }
     public interface IEarthDraftStore
     {
@@ -76,8 +78,17 @@ namespace SagittariusA.Gameplay.Flow
         // Power and landing are intentionally completed after launch. They do not hold the rocket on Earth.
         public bool CanLaunchFromEarth => Assessment.issues.All(issue => !issue.blocksLaunch || IsInFlightIssue(issue.code));
         public event Action Changed;
+        public event Action<EarthActivity> ActivityCompleted;
         public event Action<EarthMoonHandoff> MoonStageRequested;
         public string Notice { get; private set; }
+        public bool HasPlayedDialogue(string id) => draft != null && draft.playedDialogueIds != null && draft.playedDialogueIds.Contains(id);
+        public void MarkDialoguePlayed(string id)
+        {
+            if (draft == null || string.IsNullOrEmpty(id)) return;
+            if (draft.playedDialogueIds == null) draft.playedDialogueIds = new List<string>();
+            if (draft.playedDialogueIds.Contains(id)) return;
+            draft.playedDialogueIds.Add(id); Save();
+        }
 
         private static T Clone<T>(T value) => JsonUtility.FromJson<T>(JsonUtility.ToJson(value));
         public void Initialize(IEarthDraftStore draftStore = null)
@@ -216,6 +227,7 @@ namespace SagittariusA.Gameplay.Flow
             }
             Notice = result.activity == EarthActivity.Cargo ? "Cargo secured. Launch check saved." : "In-flight check completed and saved.";
             Save();
+            ActivityCompleted?.Invoke(result.activity);
         }
         public bool TryLaunch()
         {

@@ -17,7 +17,7 @@ namespace SagittariusA.Minigames.JupiterShieldAllocation
             Id = IdValue, MissionId = "jupiter", MissionLabel = "Jupiter orbiter", Title = "Radiation Shield Allocation",
             Instruction = "Place limited shielding over the highest-risk spacecraft systems before the radiation surge.",
             EducationalSubtitle = "Heavier shields protect more but use more of the spacecraft's mass allowance.",
-            DefaultTimeLimitSeconds = 60f, EducationalNote = ShieldAllocationRules.EducationalNote };
+            DefaultTimeLimitSeconds = 50f, EducationalNote = ShieldAllocationRules.EducationalNote };
         public override string Id => IdValue;
 
         private ShieldAllocationRules rules;
