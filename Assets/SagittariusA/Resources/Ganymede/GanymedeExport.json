@@ -1,0 +1,40 @@
+{
+  "sharedMeshes": 146,
+  "changedSharedMeshes": [],
+  "meshCount": 238,
+  "anchors": {
+    "crater-plain": [
+      -14.0,
+      2.0,
+      0.03500000014901161
+    ],
+    "grooved-rise": [
+      13.0,
+      13.0,
+      0.03500000014901161
+    ],
+    "Lander_Return": [
+      -15.0,
+      -18.0,
+      0.11999999731779099
+    ],
+    "photo-overlook": [
+      24.0,
+      21.0,
+      0.03500000014901161
+    ],
+    "PlayerSpawn": [
+      -12.0,
+      -16.0,
+      0.21978384256362915
+    ]
+  },
+  "groups": {
+    "SharedEnvironment": 146,
+    "ArrivalEquipment": 89,
+    "Built_Radiation": 1,
+    "Built_IceSurvey": 1,
+    "Built_Uplink": 1,
+    "Anchors": 0
+  }
+}

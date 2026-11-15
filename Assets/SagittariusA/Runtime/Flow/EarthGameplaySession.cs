@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using SagittariusA.Gameplay.Data;
+using SagittariusA.Gameplay.UI;
 using UnityEngine;
 
 namespace SagittariusA.Gameplay.Flow
@@ -64,8 +65,11 @@ namespace SagittariusA.Gameplay.Flow
         private EarthDraftSave draft;
         private IEarthSimulationAdapter simulator = new DraftEarthSimulationAdapter();
         private IEarthMinigameRunner runner;
+        private IEarthMinigameRunner activeRunner;
+        private EarthCargoMinigame cargoRunner;
         private string activeRun;
         private EarthActivity activeActivity;
+        private TaskBriefingView taskBriefing;
         public EarthCatalog Catalog { get; private set; }
         public EarthBuild Build => Clone(draft.build);
         public EarthChecks Checks => Clone(draft.checks);
@@ -91,6 +95,7 @@ namespace SagittariusA.Gameplay.Flow
             catch (ArgumentException) { draft = null; }
             if (draft == null || draft.version != 1 || !ValidBuild(draft.build) || draft.checks?.placements == null)
                 draft = new EarthDraftSave();
+            cargoRunner = GetComponent<EarthCargoMinigame>() ?? gameObject.AddComponent<EarthCargoMinigame>();
         }
         private bool ValidBuild(EarthBuild build) => build?.parts?.Length == 6 && build.cargo != null &&
             build.cargo.Distinct().Count() == build.cargo.Count &&
@@ -106,7 +111,7 @@ namespace SagittariusA.Gameplay.Flow
         {
             if (!Busy) return;
             activeRun = null; // Invalidate before Cancel can invoke its completion callback.
-            try { runner?.Cancel(); }
+            try { activeRunner?.Cancel(); activeRunner = null; }
             finally { Notice = "Activity cancelled. Your design is preserved."; Changed?.Invoke(); }
         }
         public EarthMoonHandoff GetMoonHandoff()
@@ -123,7 +128,8 @@ namespace SagittariusA.Gameplay.Flow
             };
         }
         private static bool IsInFlightIssue(string code) => code == "power-check" || code == "landing-check";
-        public bool CanRun(EarthActivity activity) => !Busy && runner != null && runner.Supports(activity) &&
+        private IEarthMinigameRunner RunnerFor(EarthActivity activity) => runner != null && runner.Supports(activity) ? runner : activity == EarthActivity.Cargo ? cargoRunner : null;
+        public bool CanRun(EarthActivity activity) => !Busy && RunnerFor(activity) != null &&
             (activity == EarthActivity.Cargo ? !Launched : Launched && !FlightChecksCompleted);
         public void SelectPart(int group, string id)
         {
@@ -173,8 +179,19 @@ namespace SagittariusA.Gameplay.Flow
             if (!CanRun(activity)) { Notice = "This activity is waiting for its minigame module."; Changed?.Invoke(); return; }
             activeRun = Guid.NewGuid().ToString("N"); activeActivity = activity;
             var context = Context(activity); Notice = "Activity in progress."; Changed?.Invoke();
-            try { runner.Begin(context, AcceptResult); }
+            try { activeRunner = RunnerFor(activity); activeRunner.Begin(context, AcceptResult); }
             catch (Exception exception) { activeRun = null; Notice = "Activity could not start. Your design is preserved."; Debug.LogException(exception); Changed?.Invoke(); }
+        }
+        // Player-facing entry; the lower-level BeginActivity contract remains
+        // synchronous for registered runners and simulation checks.
+        public void BeginExplainedActivity(EarthActivity activity)
+        {
+            if (taskBriefing != null || !CanRun(activity)) return;
+            taskBriefing = TaskBriefingView.Open(transform, CampaignTaskBriefings.Earth(activity), accepted =>
+            {
+                taskBriefing = null;
+                if (accepted && CanRun(activity)) BeginActivity(activity);
+            });
         }
         private EarthMinigameContext Context(EarthActivity activity)
         {
@@ -190,6 +207,7 @@ namespace SagittariusA.Gameplay.Flow
         {
             if (result == null || activeRun == null || result.runId != activeRun || result.activity != activeActivity || result.buildRevision != draft.revision) return;
             activeRun = null;
+            activeRunner = null;
             if (!result.completed) { Notice = "Activity cancelled. Your design is preserved."; Changed?.Invoke(); return; }
             var candidate = Checks;
             if (result.checks == null)
@@ -226,7 +244,7 @@ namespace SagittariusA.Gameplay.Flow
             draft.launched = true; Notice = "Launch authorized. Begin in-flight power and landing checks."; Save(); return true;
         }
         private void OnApplicationPause(bool paused)
-        { if (!Busy || runner == null) return; if (paused) runner.Pause(); else runner.Resume(); }
+        { if (!Busy || activeRunner == null) return; if (paused) activeRunner.Pause(); else activeRunner.Resume(); }
         private void OnDestroy()
         { if (Busy) CancelActivity(); }
     }

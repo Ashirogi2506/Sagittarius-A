@@ -40,7 +40,7 @@ Context contains commander ID/name, mission ID, part IDs, cargo, previous accept
 
 The adapter, local PlayerPrefs draft, and run/revision protocol are implemented; this is a first integration contract, not a completed campaign save system. In-progress minigame state is not persisted: cancelling/reloading retries from the last accepted check. Coordinate a checkpoint payload with the simulation engineer before promising mid-activity resume.
 
-No registered runner means buttons stay disabled with MODULE PENDING. Do not ship a fake runner that grants all checks. A test-only runner may be used for integration tests and must be excluded from production.
+Cargo now has a production fallback runner, `EarthCargoMinigame`, available from the assembly and launch review screens. It supports drag/drop or click-to-place, adjacent panel slots, overlap rejection, individual locks, unlocking after moves, and explicit Confirm. Cancel does not change accepted checks. A registered teammate runner takes priority for activities it supports. Power and landing still require a registered runner and remain in-flight activities. Do not ship a fake runner that grants all checks.
 
 MoonStageRequested fires automatically when both in-flight activities pass. It receives EarthMoonHandoff: next mission ID, build, checks, fuel, battery, supply, launch cost and mass margin, and commander. Query GetMoonHandoff() on reload too. Resources are pre-descent amounts; the campaign simulation owns later spending and one-time transactions.
 
@@ -57,3 +57,7 @@ Deliver your prefabs/additive scenes, runner script, dependencies and setup inst
 - quit during activity -> safe retry; quit after accepted result -> accepted state preserved.
 
 Use keyboard/controller-selectable controls and a button alternative to precise dragging. Don't make optional tasks gate the main route.
+
+## Pre-task explanations
+
+The player-facing Earth buttons use `EarthGameplaySession.BeginExplainedActivity`: the campaign explanation appears first, and Begin Task starts the registered runner. Back cancels without launching the runner or changing checks. `BeginActivity` remains the synchronous runner/test entry point. These explanations do not change which activities run before launch or in flight. See `CampaignTaskBriefings.md` for the supplied ZIP modules and their separate practice launcher.

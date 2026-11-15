@@ -21,6 +21,8 @@ namespace SagittariusA.Gameplay.Flow
         {
             var session = GetComponent<EarthGameplaySession>() ?? gameObject.AddComponent<EarthGameplaySession>();
             session.Initialize();
+            if(GetComponent<ReleaseServices>()==null)gameObject.AddComponent<ReleaseServices>();
+            var flights=GetComponent<EarthFlightMinigames>()??gameObject.AddComponent<EarthFlightMinigames>();session.RegisterMinigames(flights);
             var moon = GetComponent<MoonStageController>() ?? gameObject.AddComponent<MoonStageController>();
             moon.Connect(session);
             RebuildViewMap();
@@ -76,6 +78,7 @@ namespace SagittariusA.Gameplay.Flow
                     if (button.interactable) { EventSystem.current.SetSelectedGameObject(button.gameObject); break; }
             }
             ScreenChanged?.Invoke(previous, screen);
+            if(screen==GameScreen.Simulation&&previous!=screen)ReleaseServices.Film("EarthLaunch",()=>{});
             return true;
         }
     }
@@ -342,7 +345,7 @@ namespace SagittariusA.Gameplay.Flow
         {
             if (Camera.allCamerasCount == 0)
             {
-                GameObject cameraObject = new GameObject("UI Fallback Camera", typeof(Camera));
+                GameObject cameraObject = new GameObject("UI Fallback Camera", typeof(Camera), typeof(AudioListener));
                 cameraObject.transform.SetParent(flowRoot, false);
                 Camera camera = cameraObject.GetComponent<Camera>();
                 camera.clearFlags = CameraClearFlags.SolidColor;
@@ -485,10 +488,12 @@ namespace SagittariusA.Gameplay.Flow
             resume.GetComponentInChildren<Text>().alignment = TextAnchor.MiddleLeft;
             resume.onClick.AddListener(() => {
                 var flow = parent.GetComponentInParent<GameFlowController>();
+                if (SagittariusA.Gameplay.Ganymede.GanymedeCampaignBridge.TryContinue(flow.gameObject)) return;
                 var session = flow.GetComponent<EarthGameplaySession>();
                 flow.Show(session.FlightChecksCompleted ? GameScreen.MoonArrival : session.Launched ? GameScreen.Results : GameScreen.Configuration);
             });
-            CreateMenuItem(panel.transform, "MISSION ARCHIVE", 0.43f);
+            CreateMenuItem(panel.transform, "NEW EXPEDITION", 0.70f);
+            CreateMenuItem(panel.transform, "ACHIEVEMENTS", 0.43f);
             CreateMenuItem(panel.transform, "SETTINGS", 0.36f);
             CreateMenuItem(panel.transform, "CREDITS", 0.29f);
             CreateMenuItem(panel.transform, "EXIT", 0.22f);
@@ -500,6 +505,20 @@ namespace SagittariusA.Gameplay.Flow
                 var owner = parent.GetComponentInParent<GameFlowController>();
                 var moon = owner.GetComponent<MoonPlayableExperience>() ?? owner.gameObject.AddComponent<MoonPlayableExperience>();
                 moon.StartIsolatedTest();
+            });
+            Button marsTest = CreateButton("MarsIsolatedTest", panel.transform, "MARS CHAPTER TEST", Color.clear);
+            Stretch(marsTest.GetComponent<RectTransform>(), new Vector2(.39f,.12f), new Vector2(.68f,.19f), Vector2.zero, Vector2.zero);
+            marsTest.onClick.AddListener(() => {
+                var owner = parent.GetComponentInParent<GameFlowController>();
+                var mars = owner.GetComponent<SagittariusA.Gameplay.Mars.MarsPlayableExperience>() ?? owner.gameObject.AddComponent<SagittariusA.Gameplay.Mars.MarsPlayableExperience>();
+                mars.StartIsolatedTest();
+            });
+            Button ganymedeTest = CreateButton("GanymedeIsolatedTest", panel.transform, "GANYMEDE TEST", Color.clear);
+            Stretch(ganymedeTest.GetComponent<RectTransform>(), new Vector2(.71f,.12f), new Vector2(.96f,.19f), Vector2.zero, Vector2.zero);
+            ganymedeTest.onClick.AddListener(() => {
+                var owner = parent.GetComponentInParent<GameFlowController>();
+                var chapter = owner.GetComponent<SagittariusA.Gameplay.Ganymede.GanymedePlayableExperience>() ?? owner.gameObject.AddComponent<SagittariusA.Gameplay.Ganymede.GanymedePlayableExperience>();
+                chapter.StartIsolatedTest();
             });
 #endif
 
@@ -526,7 +545,9 @@ namespace SagittariusA.Gameplay.Flow
 
         private static void CreateMenuItem(Transform parent, string label, float y)
         {
-            CreateLabel(parent, label, 21, FontStyle.Normal, new Color(0.78f, 0.81f, 0.86f, 1f), new Vector2(0.065f, y), new Vector2(0.35f, y + 0.065f));
+            var button=CreateButton(label,parent,label,Color.clear);
+            Stretch(button.GetComponent<RectTransform>(),new Vector2(.055f,y),new Vector2(.38f,y+.065f),Vector2.zero,Vector2.zero);
+            button.GetComponentInChildren<Text>().alignment=TextAnchor.MiddleLeft;button.onClick.AddListener(()=>ReleaseServices.Instance.Open(label));
         }
 
         private static string GetStepLabel(GameScreen screen)
@@ -578,16 +599,24 @@ namespace SagittariusA.Gameplay.Flow
             Image male = CreateCard(parent, "MaleCommander", new Vector2(0.03f, 0.16f), new Vector2(0.28f, 0.9f), CardSelected);
             Button maleButton = male.gameObject.AddComponent<Button>();
             CreateLabel(male.transform, "01", 15, FontStyle.Bold, Accent, new Vector2(0.08f, 0.8f), new Vector2(0.92f, 0.93f));
-            CreateLabel(male.transform, "COMMANDER", 14, FontStyle.Bold, MutedText, new Vector2(0.08f, 0.63f), new Vector2(0.92f, 0.78f));
-            CreateLabel(male.transform, "ALEX", 28, FontStyle.Bold, TextColor, new Vector2(0.08f, 0.42f), new Vector2(0.92f, 0.64f));
-            Text maleStatus = CreateLabel(male.transform, "SELECTED", 14, FontStyle.Bold, Success, new Vector2(0.08f, 0.11f), new Vector2(0.92f, 0.27f));
+            var maleFrame=new GameObject("Portrait frame",typeof(RectTransform));maleFrame.transform.SetParent(male.transform,false);
+            Stretch((RectTransform)maleFrame.transform,new Vector2(.12f,.25f),new Vector2(.88f,.94f),Vector2.zero,Vector2.zero);
+            var malePortrait=new GameObject("Team commander portrait",typeof(RectTransform),typeof(RawImage),typeof(AspectRatioFitter));malePortrait.transform.SetParent(maleFrame.transform,false);
+            var maleFit=malePortrait.GetComponent<AspectRatioFitter>();maleFit.aspectMode=AspectRatioFitter.AspectMode.FitInParent;maleFit.aspectRatio=.75f;
+            malePortrait.GetComponent<RawImage>().texture=Resources.Load<Texture2D>("Characters/male");malePortrait.GetComponent<RawImage>().raycastTarget=false;
+            CreateLabel(male.transform, "ALEX", 24, FontStyle.Bold, TextColor, new Vector2(0.08f, 0.04f), new Vector2(0.92f, 0.17f));
+            Text maleStatus = CreateLabel(male.transform, "SELECTED", 13, FontStyle.Bold, Success, new Vector2(0.08f, 0.17f), new Vector2(0.92f, 0.25f));
 
             Image female = CreateCard(parent, "FemaleCommander", new Vector2(0.3f, 0.16f), new Vector2(0.55f, 0.9f), Card);
             Button femaleButton = female.gameObject.AddComponent<Button>();
             CreateLabel(female.transform, "02", 15, FontStyle.Bold, Accent, new Vector2(0.08f, 0.8f), new Vector2(0.92f, 0.93f));
-            CreateLabel(female.transform, "COMMANDER", 14, FontStyle.Bold, MutedText, new Vector2(0.08f, 0.63f), new Vector2(0.92f, 0.78f));
-            CreateLabel(female.transform, "ARI", 28, FontStyle.Bold, TextColor, new Vector2(0.08f, 0.42f), new Vector2(0.92f, 0.64f));
-            Text femaleStatus = CreateLabel(female.transform, "AVAILABLE", 14, FontStyle.Bold, MutedText, new Vector2(0.08f, 0.11f), new Vector2(0.92f, 0.27f));
+            var femaleFrame=new GameObject("Portrait frame",typeof(RectTransform));femaleFrame.transform.SetParent(female.transform,false);
+            Stretch((RectTransform)femaleFrame.transform,new Vector2(.12f,.25f),new Vector2(.88f,.94f),Vector2.zero,Vector2.zero);
+            var femalePortrait=new GameObject("Team commander portrait",typeof(RectTransform),typeof(RawImage),typeof(AspectRatioFitter));femalePortrait.transform.SetParent(femaleFrame.transform,false);
+            var femaleFit=femalePortrait.GetComponent<AspectRatioFitter>();femaleFit.aspectMode=AspectRatioFitter.AspectMode.FitInParent;femaleFit.aspectRatio=.75f;
+            femalePortrait.GetComponent<RawImage>().texture=Resources.Load<Texture2D>("Characters/female");femalePortrait.GetComponent<RawImage>().raycastTarget=false;
+            CreateLabel(female.transform, "ARI", 24, FontStyle.Bold, TextColor, new Vector2(0.08f, 0.04f), new Vector2(0.92f, 0.17f));
+            Text femaleStatus = CreateLabel(female.transform, "AVAILABLE", 13, FontStyle.Bold, MutedText, new Vector2(0.08f, 0.17f), new Vector2(0.92f, 0.25f));
 
             Image profile = CreateCard(parent, "CommanderProfile", new Vector2(0.59f, 0.16f), new Vector2(0.97f, 0.9f), Card);
             CreateLabel(profile.transform, "COMMANDER PROFILE", 17, FontStyle.Bold, TextColor, new Vector2(0.07f, 0.8f), new Vector2(0.93f, 0.93f));

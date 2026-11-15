@@ -14,16 +14,14 @@ namespace SagittariusA.Gameplay.UI
     public sealed class EarthAssemblyView : MonoBehaviour
     {
         private static readonly string[] Groups = { "Launcher", "Nozzle", "Cover", "Engine", "Cargo bay", "Power", "Cargo" };
-        private static readonly Vector3[] Positions = {
-            new Vector3(0, -2.5f, 0), new Vector3(0, -4.1f, 0), new Vector3(0, 3.8f, 0),
-            new Vector3(0, -.7f, 0), new Vector3(0, 1f, 0), new Vector3(2.5f, 1.8f, 0),
-            new Vector3(-2.6f, 1f, 0)
-        };
+        private readonly Vector3[] positions = new Vector3[7];
         private static readonly Color Accent = new Color(1, .43f, .04f);
         private EarthGameplaySession session;
         private GameFlowController flow;
         private RectTransform controls, viewport, presets;
         private Text totals, feedback, candidateLabel;
+        private Button packCargo, exteriorToggle;
+        private bool showFlightExterior = true;
         private RawImage display;
         private GameObject studio, ship;
         private Camera previewCamera;
@@ -33,7 +31,7 @@ namespace SagittariusA.Gameplay.UI
         private readonly List<(Text label, int group)> socketLabels = new List<(Text, int)>();
         private int group;
         private bool dirty;
-        private float yaw = 22, pitch = 8, zoom = 5.7f;
+        private float yaw = 22, pitch = 8, zoom = 3.8f;
 
         public static void Create(Transform parent)
         {
@@ -57,7 +55,8 @@ namespace SagittariusA.Gameplay.UI
             previewCamera.aspect = viewport.rect.width / Mathf.Max(1, viewport.rect.height);
             foreach (var entry in socketLabels)
             {
-                var p = previewCamera.WorldToViewportPoint(ship.transform.TransformPoint(Positions[entry.group]));
+                entry.label.gameObject.SetActive(!showFlightExterior && entry.group == group);
+                var p = previewCamera.WorldToViewportPoint(ship.transform.TransformPoint(positions[entry.group]));
                 var rect = entry.label.rectTransform;
                 rect.anchorMin = rect.anchorMax = new Vector2(p.x, p.y);
             }
@@ -88,17 +87,18 @@ namespace SagittariusA.Gameplay.UI
             ActionButton(transform, "ZOOM IN", .519f, .635f, .105f, .035f, () => Zoom(1));
             ActionButton(transform, "ZOOM OUT", .626f, .635f, .105f, .035f, () => Zoom(-1));
             Label(transform, "Click a part to swap instantly · Drag to rotate · Scroll to zoom", .30f, .105f, .44f, .045f, 17, Color.white);
-            Label(transform, "INTERACTIVE 3D PARTS / EXPLODED VIEW", .30f, .065f, .44f, .035f, 15, new Color(.65f, .72f, .8f));
+            exteriorToggle=ActionButton(transform,"SHOW MODULES",.30f,.065f,.44f,.035f,()=>{showFlightExterior=!showFlightExterior;dirty=true;});
             var dash = Box(transform, "Fitted ship totals", .755f, .16f, .22f, .52f, new Color(.055f, .07f, .10f));
             Label(dash, "FITTED SHIP / LIVE TOTALS", .06f, .87f, .88f, .09f, 20, Accent);
             totals = Label(dash, "", .06f, .40f, .88f, .46f, 22, Color.white);
             feedback = Label(dash, "", .06f, .04f, .88f, .34f, 20, Color.white);
             candidateLabel = Label(transform, "", .025f, .035f, .26f, .10f, 18, Color.white);
+            packCargo = ActionButton(transform,"PACK & LOCK CARGO",.755f,.075f,.22f,.06f,()=>session.BeginExplainedActivity(EarthActivity.Cargo),Accent);
         }
         public void SelectCategory(int index)
         {
             if (index < 0 || index > 6) return;
-            group = index; dirty = true;
+            group = index; showFlightExterior=false; dirty = true;
         }
         private void CreateStudio()
         {
@@ -139,6 +139,7 @@ namespace SagittariusA.Gameplay.UI
         }
         private void Refresh()
         {
+            if(packCargo!=null){packCargo.interactable=session.CanRun(EarthActivity.Cargo);packCargo.GetComponentInChildren<Text>().text=session.Checks.placements.Count>0&&session.Checks.placements.All(p=>p.locked)?"RECHECK CARGO LOCKS":"PACK & LOCK CARGO";}
             var focused = EventSystem.current?.currentSelectedGameObject;
             string focusName = focused != null && (focused.transform.IsChildOf(controls) || focused.transform.IsChildOf(presets)) ? focused.name : null;
             foreach (Transform child in controls) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
@@ -193,52 +194,103 @@ namespace SagittariusA.Gameplay.UI
         {
             sockets.Clear();
             foreach (Transform child in ship.transform) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
-            for (int i = 0; i < 7; i++)
+            // Measure with no preview rotation so each part keeps the model's authored proportions.
+            Quaternion previousRotation = ship.transform.localRotation;
+            ship.transform.localRotation = Quaternion.identity;
+            exteriorToggle.GetComponentInChildren<Text>().text=showFlightExterior?"SHOW CONFIGURABLE MODULES":"SHOW FLIGHT EXTERIOR";
+            if(showFlightExterior)
+            {
+                var exterior=ExpeditionShipVisual.Create(ship.transform,ship.transform.position+Vector3.down*3.2f,6.4f,"Ships/LaunchStack");
+                if(exterior!=null)
+                {
+                    foreach(var t in exterior.GetComponentsInChildren<Transform>(true))t.gameObject.layer=31;
+                    foreach(var c in exterior.GetComponentsInChildren<Collider>())c.enabled=false;
+                    ship.transform.localRotation=previousRotation;
+                    return;
+                }
+            }
+            var partsInView = new Transform[6];
+            var localBounds = new Bounds[6];
+            for (int i = 0; i < 6; i++)
             {
                 var socket = new GameObject(Groups[i] + " attachment");
-                socket.transform.SetParent(ship.transform, false); socket.transform.localPosition = Positions[i];
-                if (i == 6)
-                {
-                    // Cargo is only staged here; packing/locking stays with the cargo minigame.
-                    int count = Math.Max(1, build.cargo.Count);
-                    for (int j = 0; j < count; j++)
-                    {
-                        var position = new Vector3((j % 2) * .78f - .39f, (j / 2) * .78f, 0);
-                        var id = j < build.cargo.Count ? build.cargo[j] : null;
-                        var cargoPrefab = id == null ? null : Resources.Load<GameObject>("EarthParts/" + id);
-                        if (cargoPrefab == null) Primitive(socket.transform, PrimitiveType.Cube, position, Vector3.one * .52f, i);
-                        else
-                        {
-                            var holder = new GameObject(id + " staged cargo");
-                            holder.transform.SetParent(socket.transform, false); holder.transform.localPosition = position;
-                            var visual = Instantiate(cargoPrefab, holder.transform, false);
-                            AddArtworkTarget(holder.transform, visual, i);
-                        }
-                    }
-                    continue;
-                }
+                socket.transform.SetParent(ship.transform, false);
+                partsInView[i] = socket.transform;
                 var part = session.Catalog.Group(i).First(x => x.id == build.parts[i]);
-                // Optional final artwork: Resources/EarthParts/<stable part ID>. Prefab origin = attachment.
                 var prefab = Resources.Load<GameObject>("EarthParts/" + part.id);
                 if (prefab != null)
                 {
                     var visual = Instantiate(prefab, socket.transform, false);
-                    AddArtworkTarget(socket.transform, visual, i);
-                    continue;
+                    if (i == 4)
+                    {
+                        // A cylindrical cargo container, sized from the selected bay model.
+                        var bay = MeasureLocalBounds(socket.transform);
+                        visual.SetActive(false); Destroy(visual);
+                        float width = Mathf.Max(.2f, Mathf.Max(bay.size.x, bay.size.z));
+                        float height = Mathf.Max(.2f, bay.size.y);
+                        Primitive(socket.transform, PrimitiveType.Cylinder, Vector3.zero, new Vector3(width, height * .5f, width), i);
+                        Primitive(socket.transform, PrimitiveType.Cylinder, new Vector3(0, height * .46f, 0), new Vector3(width * 1.05f, height * .035f, width * 1.05f), i);
+                        Primitive(socket.transform, PrimitiveType.Cylinder, new Vector3(0, -height * .46f, 0), new Vector3(width * 1.05f, height * .035f, width * 1.05f), i);
+                    }
+                    else AddArtworkTarget(socket.transform, visual, i);
                 }
-                float variant = Array.FindIndex(session.Catalog.Group(i), x => x.id == part.id);
-                switch (i)
+                else
                 {
-                    case 0: Primitive(socket.transform, PrimitiveType.Cylinder, Vector3.zero, new Vector3(1.25f + variant * .17f, 1.15f, 1.25f + variant * .17f), i); break;
-                    case 1: Primitive(socket.transform, PrimitiveType.Cylinder, Vector3.zero, new Vector3(.65f + variant * .12f, .28f + variant * .05f, .65f + variant * .12f), i); break;
-                    case 2: Primitive(socket.transform, PrimitiveType.Capsule, Vector3.zero, new Vector3(1.2f + variant * .12f, .65f, 1.2f + variant * .12f), i); break;
-                    case 3: Primitive(socket.transform, PrimitiveType.Cylinder, Vector3.zero, new Vector3(1, .35f + variant * .06f, 1), i); break;
-                    case 4: Primitive(socket.transform, PrimitiveType.Cube, Vector3.zero, new Vector3(1.1f + part.size * .09f, 1.2f, 1.1f), i); break;
-                    case 5:
-                        Primitive(socket.transform, PrimitiveType.Cube, Vector3.zero, new Vector3(.65f, .8f, .6f), i);
-                        Primitive(socket.transform, PrimitiveType.Cube, new Vector3(.8f, 0, 0), new Vector3(.8f, 1.5f + variant * .2f, .12f), i); break;
+                    float variant = Array.FindIndex(session.Catalog.Group(i), x => x.id == part.id);
+                    switch (i)
+                    {
+                        case 0: Primitive(socket.transform, PrimitiveType.Cylinder, Vector3.zero, new Vector3(.46f, 1.7f, .46f), i); break;
+                        case 1: Primitive(socket.transform, PrimitiveType.Cylinder, Vector3.zero, new Vector3(.16f, .1f, .16f), i); break;
+                        case 2: Primitive(socket.transform, PrimitiveType.Capsule, Vector3.zero, new Vector3(.27f, .13f, .27f), i); break;
+                        case 3: Primitive(socket.transform, PrimitiveType.Cylinder, Vector3.zero, new Vector3(.4f, .19f, .4f), i); break;
+                        case 4: Primitive(socket.transform, PrimitiveType.Cylinder, Vector3.zero, new Vector3(.24f + part.size * .03f, .11f, .24f + part.size * .03f), i); break;
+                        case 5: Primitive(socket.transform, PrimitiveType.Cube, Vector3.zero, new Vector3(.5f, .12f + variant * .02f, .4f), i); break;
+                    }
+                }
+                localBounds[i] = MeasureLocalBounds(socket.transform);
+            }
+            float cursor = 0;
+            foreach (int index in new[] { 1, 0, 3, 4, 5, 2 })
+            {
+                var bounds = localBounds[index];
+                partsInView[index].localPosition = new Vector3(0, cursor - bounds.min.y, 0);
+                cursor += bounds.size.y + .06f;
+            }
+            float centerY = (cursor - .06f) * .5f;
+            for (int i = 0; i < 6; i++)
+            {
+                partsInView[i].localPosition -= new Vector3(0, centerY, 0);
+                positions[i] = partsInView[i].localPosition + localBounds[i].center;
+            }
+            // Cargo was exported eight times larger for the old exploded view.
+            // Restore the common art scale and stage it next to the cargo cylinder.
+            var cargo = new GameObject("Cargo attachment"); cargo.transform.SetParent(ship.transform, false);
+            cargo.transform.localPosition = positions[4] + new Vector3(localBounds[4].extents.x + .24f, 0, 0);
+            positions[6] = cargo.transform.localPosition;
+            for (int j = 0; j < build.cargo.Count; j++)
+            {
+                var id = build.cargo[j];
+                var holder = new GameObject(id + " staged cargo"); holder.transform.SetParent(cargo.transform, false);
+                holder.transform.localPosition = new Vector3((j % 2) * .19f, (j / 2) * .16f - .08f, 0);
+                var prefab = Resources.Load<GameObject>("EarthParts/" + id);
+                if (prefab == null) Primitive(holder.transform, PrimitiveType.Cube, Vector3.zero, Vector3.one * .08f, 6);
+                else
+                {
+                    var visual = Instantiate(prefab, holder.transform, false);
+                    visual.transform.localScale *= .125f;
+                    AddArtworkTarget(holder.transform, visual, 6);
                 }
             }
+            ship.transform.localRotation = previousRotation;
+        }
+        private static Bounds MeasureLocalBounds(Transform root)
+        {
+            var renderers = root.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0) return new Bounds(Vector3.zero, Vector3.one * .2f);
+            var bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+            bounds.center = root.InverseTransformPoint(bounds.center);
+            return bounds;
         }
         private void AddArtworkTarget(Transform root, GameObject visual, int socket)
         {
@@ -272,7 +324,7 @@ namespace SagittariusA.Gameplay.UI
             ship.transform.localRotation = Quaternion.Euler(pitch, yaw, 0);
             previewCamera.orthographicSize = zoom;
         }
-        internal void Zoom(float amount) { zoom = Mathf.Clamp(zoom - amount * .4f, 4.5f, 10); Orbit(0, 0); }
+        internal void Zoom(float amount) { zoom = Mathf.Clamp(zoom - amount * .3f, 2.6f, 10); Orbit(0, 0); }
         internal void Pick(PointerEventData input)
         {
             Physics.SyncTransforms();

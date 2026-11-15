@@ -15,7 +15,7 @@ Work from the `feature/gameplay-ui` branch, then create your own `feature/moon-s
 
 ## Acceptance checks together
 
-After the loader exists, finish Earth flight checks and confirm the Moon scene receives the same commander, ship, cargo and landing plan. Verify the cart requires start, switch off, open cover, three one-second holds, close, retest, then load panel and kit. Verify out-of-order actions do not progress. Leave and resume during repair; restored visuals must match saved cart state. Verify descent fuel is spent once and insufficient fuel reports the restart state. Exercise this in Play mode using the real scene and gameplay controller.
+After the loader exists, finish Earth flight checks and confirm the Moon scene receives the same commander, ship, cargo and landing plan. Verify the cart requires start, switch off, open cover, three one-second holds, close and retest; then pick up and load the panel and kit one at a time. Verify out-of-order actions do not progress. Leave and resume during repair or while carrying cargo; restored visuals must match saved state. Verify descent fuel is spent once and insufficient fuel reports the restart state. Exercise this in Play mode using the real scene and gameplay controller.
 
 ## Boundaries and open decisions
 

@@ -82,8 +82,7 @@ namespace SagittariusA.Gameplay.UI
                 screen == GameScreen.Simulation ? "VIEW FLIGHT LOG" : screen == GameScreen.Results ?
                 (session.FlightChecksCompleted ? "MOON ARRIVAL" : "COMPLETE FLIGHT CHECKS") : "LAND ON MOON";
             primary.interactable = !session.Busy && (screen != GameScreen.Review || session.CanLaunchFromEarth) &&
-                (screen != GameScreen.Results || session.FlightChecksCompleted) &&
-                (screen != GameScreen.MoonArrival || session.Checks.padId == "main");
+                (screen != GameScreen.Results || session.FlightChecksCompleted);
             if (EventSystem.current != null && (selectedName != null || selected == null || !selected.activeInHierarchy))
             {
                 var buttons = GetComponentsInChildren<Button>().Where(b => b.interactable).ToArray();
@@ -110,24 +109,23 @@ namespace SagittariusA.Gameplay.UI
                 Issues(right, a, .04f, .39f, .92f, .48f, issue => !IsInFlightIssue(issue));
                 Label(right, "Power and landing checks happen after launch, while flying.", .05f, .27f, .9f, .09f, 18, Muted);
                 bool available = session.CanRun(EarthActivity.Cargo);
-                var button = ActionButton(right, "PACK & LOCK CARGO" + (available ? "" : " · MODULE PENDING"), .05f, .13f, .9f, .09f, () => session.BeginActivity(EarthActivity.Cargo));
+                var button = ActionButton(right, "PACK & LOCK CARGO" + (available ? "" : " · MODULE PENDING"), .05f, .13f, .9f, .09f, () => session.BeginExplainedActivity(EarthActivity.Cargo));
                 button.interactable = available;
             }
             else if (screen == GameScreen.MoonArrival)
             {
                 Label(right, "FLIGHT PHASE COMPLETE", .06f, .79f, .88f, .12f, 28, Green);
-                string moonText = checks.padId == "main"
-                    ? "Khulan's map is ready.\n\nContinue to the Moon, confirm the landing plan, and prepare the cart for Pole-7. Your ship manifest and checks are preserved."
-                    : "The Ridge landing scene is not connected yet. Your landing plan and ship manifest are preserved.";
+                string moonText = "Khulan's map is ready.\n\nContinue to the Moon, confirm the " +
+                    (checks.padId == "ridge" ? "Ridge" : "Beacon") + " Pad landing plan, and prepare the cart for Pole-7. Your ship manifest and checks are preserved.";
                 Label(right, moonText, .06f, .15f, .88f, .60f, 24, Color.white);
             }
             else if (screen == GameScreen.Results)
             {
                 Label(right, session.FlightChecksCompleted ? "FLIGHT CHECKS COMPLETE" : "EARTH ORBIT / MOON TRANSIT", .05f, .90f, .9f, .07f, 24, session.FlightChecksCompleted ? Green : Orange);
                 Issues(right, a, .04f, .39f, .92f, .48f, IsInFlightIssue);
-                var power = ActionButton(right, "TEST POWER", .05f, .25f, .9f, .09f, () => session.BeginActivity(EarthActivity.Power));
+                var power = ActionButton(right, "TEST POWER", .05f, .25f, .9f, .09f, () => session.BeginExplainedActivity(EarthActivity.Power));
                 power.interactable = session.CanRun(EarthActivity.Power);
-                var landing = ActionButton(right, "PLAN LANDING", .05f, .13f, .9f, .09f, () => session.BeginActivity(EarthActivity.Landing));
+                var landing = ActionButton(right, "PLAN LANDING", .05f, .13f, .9f, .09f, () => session.BeginExplainedActivity(EarthActivity.Landing));
                 landing.interactable = session.CanRun(EarthActivity.Landing);
             }
             else
@@ -160,8 +158,8 @@ namespace SagittariusA.Gameplay.UI
             {
                 var button = ActionButton(content, (issue.blocksLaunch ? "[HOLD] " : "[NOTE] ") + issue.message, 0, 0, 1, 1,
                     () => {
-                        if (issue.code == "power-check") session.BeginActivity(EarthActivity.Power);
-                        else if (issue.code == "landing-check") session.BeginActivity(EarthActivity.Landing);
+                        if (issue.code == "power-check") session.BeginExplainedActivity(EarthActivity.Power);
+                        else if (issue.code == "landing-check") session.BeginExplainedActivity(EarthActivity.Landing);
                         else { flow.Show(GameScreen.Configuration); flow.GetComponentInChildren<EarthAssemblyView>(true).SelectCategory(issue.category); }
                     });
                 var label = button.GetComponentInChildren<Text>(); label.fontSize = 19; label.alignment = TextAnchor.MiddleLeft; label.color = issue.blocksLaunch ? Red : Orange;
