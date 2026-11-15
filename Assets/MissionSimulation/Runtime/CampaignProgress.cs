@@ -24,6 +24,11 @@ namespace MissionSimulation.FarSignal
         public List<string> receivedPackets = new List<string>();
         public List<string> marsTransitPackets = new List<string>();
         public List<SurveyRecord> surveyRecords = new List<SurveyRecord>();
+        // Optional records; null/empty in saves created before these fields existed.
+        public int[] marsBenchSamples;
+        public string marsBenchSensorMode;
+        public string[] marsPracticeQueue;
+        public string terrainPhotoId, terrainPhotoDarkSiteId, terrainPhotoBrightSiteId;
     }
 
     public sealed class CampaignProgress
@@ -91,6 +96,7 @@ namespace MissionSimulation.FarSignal
             if (s.antenna == antenna && s.shield == shield && s.sensorMode == sensorMode) return true;
             s.antenna = antenna; s.shield = shield; s.sensorMode = sensorMode;
             s.benchPassed = s.seated = s.clamp1 = s.clamp2 = s.planReceived = false;
+            s.marsBenchSamples = null; s.marsBenchSensorMode = null;
             return true;
         }
         public static bool UseSpareForAntenna(CampaignState s)
@@ -115,6 +121,7 @@ namespace MissionSimulation.FarSignal
             if (s.powerCableConnected == powerConnected && s.dataCableConnected == dataConnected) return true;
             s.powerCableConnected = powerConnected; s.dataCableConnected = dataConnected;
             s.benchPassed = s.seated = s.clamp1 = s.clamp2 = s.planReceived = false;
+            s.marsBenchSamples = null; s.marsBenchSensorMode = null;
             return true;
         }
         public static bool CanLoad(CampaignState s)

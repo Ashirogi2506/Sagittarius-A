@@ -44,6 +44,20 @@ namespace MissionSimulation.FarSignal
             => Apply(id, "orbiter:cables:" + powerConnected + ":" + dataConnected, s => AtMars(s) && CampaignProgress.SetBenchConnections(s, powerConnected, dataConnected));
         public CampaignSaveResult CompleteBenchTest(string id, bool powerConnected, bool dataConnected)
             => Apply(id, "orbiter:bench:" + powerConnected + ":" + dataConnected, s => AtMars(s) && CampaignProgress.TryBenchTest(s, powerConnected, dataConnected));
+        public CampaignSaveResult CompleteBenchTestWithGraph(string id, bool powerConnected, bool dataConnected, int[] simulatedParticleCounts)
+        {
+            if (simulatedParticleCounts == null) throw new ArgumentNullException(nameof(simulatedParticleCounts));
+            var samples = (int[])simulatedParticleCounts.Clone();
+            var keys = new string[samples.Length];
+            for (int i = 0; i < samples.Length; i++) keys[i] = samples[i].ToString(CultureInfo.InvariantCulture);
+            return Apply(id, "orbiter:bench-graph:" + powerConnected + ":" + dataConnected + ":" + string.Join(":", keys),
+                s => AtMars(s) && CampaignProgress.TryBenchTest(s, powerConnected, dataConnected) && CampaignOptionalRecords.SaveBenchGraph(s, samples));
+        }
+        public CampaignSaveResult SavePassingPracticeQueue(string id, string[] packetIds)
+        {
+            var queue = CopyQueue(packetIds);
+            return Apply(id, "mars:practice:" + QueueKey(queue), s => AtMars(s) && CampaignOptionalRecords.SavePassingPracticeQueue(s, queue));
+        }
         public CampaignSaveResult SeatOrbiter(string id) => Apply(id, "orbiter:seat", CampaignProgress.SeatOrbiter);
         public CampaignSaveResult SetClamp(string id, int index, bool locked)
             => Apply(id, "orbiter:clamp:" + index.ToString(CultureInfo.InvariantCulture) + ":" + locked, s => CampaignProgress.SetClamp(s, index, locked));
@@ -58,6 +72,9 @@ namespace MissionSimulation.FarSignal
             });
         public CampaignSaveResult AcceptComparison(string id, string conclusion)
             => Apply(id, "survey:comparison:" + Field(conclusion), s => CampaignProgress.AcceptComparison(s, conclusion));
+        public CampaignSaveResult SaveTerrainPhoto(string id, string imageId, string darkSiteId, string brightSiteId)
+            => Apply(id, "survey:photo:" + Field(imageId) + ":" + Field(darkSiteId) + ":" + Field(brightSiteId),
+                s => CampaignOptionalRecords.SaveTerrainPhoto(s, imageId, darkSiteId, brightSiteId));
         public CampaignSaveResult ReturnToOrbit(string id) => Apply(id, "ganymede:orbit", CampaignProgress.ReturnToOrbit);
         public CampaignSaveResult Deploy(string id, bool crewReady, bool atReleasePoint)
             => Apply(id, "orbiter:deploy:" + crewReady + ":" + atReleasePoint, s => CampaignProgress.Deploy(s, crewReady, atReleasePoint));
