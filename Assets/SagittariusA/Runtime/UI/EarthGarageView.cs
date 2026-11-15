@@ -62,7 +62,11 @@ namespace SagittariusA.Gameplay.UI
             {
                 if (session.FlightChecksCompleted) flow.Show(GameScreen.MoonArrival);
             }
-            else flow.Show(GameScreen.Results);
+            else
+            {
+                var moon = flow.GetComponent<MoonPlayableExperience>() ?? flow.gameObject.AddComponent<MoonPlayableExperience>();
+                moon.StartCampaign();
+            }
         }
         private void Render()
         {
@@ -76,9 +80,10 @@ namespace SagittariusA.Gameplay.UI
             RenderReport(a);
             primary.GetComponentInChildren<Text>().text = screen == GameScreen.Review ? (session.Launched ? "VIEW LAUNCH" : "LAUNCH") :
                 screen == GameScreen.Simulation ? "VIEW FLIGHT LOG" : screen == GameScreen.Results ?
-                (session.FlightChecksCompleted ? "MOON ARRIVAL" : "COMPLETE FLIGHT CHECKS") : "EARTH LOG";
+                (session.FlightChecksCompleted ? "MOON ARRIVAL" : "COMPLETE FLIGHT CHECKS") : "LAND ON MOON";
             primary.interactable = !session.Busy && (screen != GameScreen.Review || session.CanLaunchFromEarth) &&
-                (screen != GameScreen.Results || session.FlightChecksCompleted);
+                (screen != GameScreen.Results || session.FlightChecksCompleted) &&
+                (screen != GameScreen.MoonArrival || session.Checks.padId == "main");
             if (EventSystem.current != null && (selectedName != null || selected == null || !selected.activeInHierarchy))
             {
                 var buttons = GetComponentsInChildren<Button>().Where(b => b.interactable).ToArray();
@@ -111,7 +116,10 @@ namespace SagittariusA.Gameplay.UI
             else if (screen == GameScreen.MoonArrival)
             {
                 Label(right, "FLIGHT PHASE COMPLETE", .06f, .79f, .88f, .12f, 28, Green);
-                Label(right, "Khulan's map is ready.\n\nConfirm the landing plan before descent.\n\nMoon arrival is waiting for the team's playable scene. Your ship manifest and checks are preserved.", .06f, .15f, .88f, .60f, 24, Color.white);
+                string moonText = checks.padId == "main"
+                    ? "Khulan's map is ready.\n\nContinue to the Moon, confirm the landing plan, and prepare the cart for Pole-7. Your ship manifest and checks are preserved."
+                    : "The Ridge landing scene is not connected yet. Your landing plan and ship manifest are preserved.";
+                Label(right, moonText, .06f, .15f, .88f, .60f, 24, Color.white);
             }
             else if (screen == GameScreen.Results)
             {
